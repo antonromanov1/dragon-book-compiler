@@ -1,3 +1,4 @@
+mod input;
 use crate::lexer::tag;
 use crate::lexer::word;
 use crate::symbols::type_mod;
@@ -38,11 +39,14 @@ impl Lexer {
     }
 
     pub fn readch(&mut self) {
-        self.peek = input::read();
+        match input::read() {
+            Some(x) => self.peek = x,
+            None => panic!("Can not read a character"),
+        }
     }
 
-    pub fn readch(&mut self, c: char) -> bool{
-        Lexer::readch(self);
+    pub fn readch_(&mut self, c: char) -> bool{
+        self.readch();
         if self.peek != c {
             false
         }
@@ -51,7 +55,7 @@ impl Lexer {
     }
 
     pub fn scan(&mut self) -> u32 {
-        while readch() {
+        while self.readch() {
             if self.peek == ' ' || self.peek == '\t' {
                 continue;
             }
@@ -74,7 +78,7 @@ impl Lexer {
             let v: u32 = 0;
             loop {
                 v = v * 10 + character::digit(self.peek, 10);
-                Lexer::readch(self);
+                self.readch();
                 if character::is_digit(self.peek) {
                     break;
                 }
@@ -85,7 +89,7 @@ impl Lexer {
             let x: f64 = v as f64;
             let d: f64 = 10;
             loop {
-                Lexer::readch(self);
+                self.readch();
                 if ! character::is_digit(self.peek) {
                     break;
                 }
@@ -98,7 +102,7 @@ impl Lexer {
             let mut b = String::new();
             loop {
                 b.push(self.peek);
-                readch();
+                self.readch();
                 if character::is_letter_or_digit(self.peek) {
                     break;
                 }
