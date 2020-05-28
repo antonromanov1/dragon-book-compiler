@@ -1,7 +1,6 @@
-extern crate text_tools;
-
 mod lexer;
 mod symbols;
+mod text_tools;
 use lexer::tag;
 use symbols::type_mod;
 use text_tools::{Expr, Stmt, Null, If, Else, While};
