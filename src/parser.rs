@@ -2,6 +2,7 @@ mod lexer;
 mod symbols;
 mod text_tools;
 mod lexer::token;
+use std::mem::align_of;
 use lexer::tag;
 use token::Token;
 use symbols::type_mod;
@@ -103,7 +104,7 @@ impl Parser {
             0 as *mut Node
         }
         else {
-            let ptr: *mut Node = allocate(size_of::<Node>(), 4);
+            let ptr: *mut Node = allocate(size_of::<Node>(), align_of::<Node>());
             unsafe {
                 (*ptr).left = stmt();
                 (*ptr).right = stmts();
