@@ -1,4 +1,6 @@
 mod input;
+mod token;
+use token::Token;
 use crate::lexer::tag;
 use crate::lexer::word;
 use crate::symbols::type_mod;
@@ -54,7 +56,7 @@ impl Lexer {
         true
     }
 
-    pub fn scan(&mut self) -> u32 {
+    pub fn scan(&mut self) -> Token {
         while self.readch() {
             if self.peek == ' ' || self.peek == '\t' {
                 continue;
@@ -84,7 +86,9 @@ impl Lexer {
                 }
             }
             if self.peek != '.' {
-                v
+                Token::Token(TokenBase {
+                    tag: v,
+                })
             }
             let x: f64 = v as f64;
             let d: f64 = 10;

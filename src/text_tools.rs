@@ -19,3 +19,18 @@ impl ExprBase {
         *self
     }
 }
+
+struct Break {}
+struct Do{}
+struct Set{}
+struct If{}
+struct While{}
+
+enum Stmt {
+    Null,
+    Break(Break),
+    Do(Do),
+    Set(Set),
+    If(If),
+    While(While),
+}

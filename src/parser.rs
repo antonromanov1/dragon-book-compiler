@@ -1,13 +1,21 @@
 mod lexer;
 mod symbols;
 mod text_tools;
+mod lexer::token;
 use lexer::tag;
+use token::Token;
 use symbols::type_mod;
 use text_tools::{Expr, Stmt, Null, If, Else, While};
 
+struct Node {
+    left: *mut Node,
+    right: *mut Node,
+    stmt: Stmt,
+}
+
 pub struct Parser {
     lex: lexer::Lexer,
-    look: u32,
+    look: Token,
     top: symbols::Env,
     used: u32,
 }
@@ -90,16 +98,22 @@ impl Parser {
         symbols::Array::new(tok, p)
     }
 
-    fn stmts(&mut self) -> text_tools::Stmt {
+    fn stmts(&mut self) -> *mut Node {
         if self.look == '}' {
-            Null
+            0 as *mut Node
         }
         else {
-            Seq::new(self.stmt(), self.stmts())
+            let ptr: *mut Node = allocate(size_of::<Node>(), 4);
+            unsafe {
+                (*ptr).left = stmt();
+                (*ptr).right = stmts();
+                (*ptr).stmt = Stmt::Null;
+            }
+            ptr
         }
     }
 
-    fn stmt(&mut self) -> text_tools::Stmt {
+    fn stmt(&mut self) -> *mut Node {
         let mut x: Expr;
         let mut s: Stmt;
         let mut s1: Stmt;
@@ -109,7 +123,7 @@ impl Parser {
         match self.look {
             ';' as u32 => {
                 self.move_();
-                Null
+                0 as *mut Node
             }
             tag::IF => {
                 self.match_(tag::IF);
