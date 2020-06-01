@@ -43,6 +43,17 @@ pub struct WordBase {
     lexeme: String,
 }
 
+impl WordBase {
+    pub fn clone(&self) -> Self {
+        WordBase {
+            token: TokenBase {
+                tag: self.token.tag,
+            },
+            lexeme: self.lexeme.clone(),
+        }
+    }
+}
+
 fn word_and() -> WordBase {
     WordBase {
         token: TokenBase {
@@ -252,6 +263,39 @@ impl Lexer {
             }
             return Token::Real(Real::new(x))
         }
+
+        if self.peek.is_alphabetic() {
+            let mut s = String::new();
+            loop {
+                s.push(self.peek);
+                self.read_char();
+
+                if !(self.peek.is_alphabetic() || self.peek.is_digit(10)) {
+                    break;
+                }
+            }
+
+            match self.words.get(&s) {
+                Some(x) => {
+                    let w = match x {
+                        Word::Word(y) => y.clone(),
+                        Word::Type(z) => z.word.clone(),
+                    };
+                    return Token::Word(Word::Word(w));
+                }
+                None => {
+                    let w = WordBase {
+                        token: TokenBase {
+                            tag: Tag::Id as u32,
+                        },
+                        lexeme: s.clone(),
+                    };
+                    self.words.insert(s, Word::Word(w.clone()));
+                    return Token::Word(Word::Word(w))
+                }
+            }
+        }
+
         let tok = Token::Token(TokenBase::new(self.peek));
         self.peek = ' ';
         tok
@@ -259,11 +303,12 @@ impl Lexer {
 }
 
 fn main() {
-    /*
     let mut lex = Lexer::new("input.kt");
     match lex.scan() {
-        Token::Num(x) => println!("{}", x.value),
+        Token::Word(x) => match x {
+            Word::Word(y) => println!("{}", y.lexeme),
+            _ => (),
+        },
         _ => (),
     };
-    */
 }
