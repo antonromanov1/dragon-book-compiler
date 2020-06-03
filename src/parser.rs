@@ -6,8 +6,8 @@ enum Stmt {
 }
 
 pub struct Node {
-    left: Box<Node>,
-    right: Box<Node>,
+    left: *mut Node,
+    right: *mut Node,
     stmt: Stmt,
     is_null: bool,
 }
