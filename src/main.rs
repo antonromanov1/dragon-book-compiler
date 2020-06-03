@@ -1,6 +1,7 @@
 mod lexer;
-use lexer::Lexer;
+mod parser;
 use lexer::*;
+use parser::*;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -9,7 +10,9 @@ fn main() {
         return ()
     }
     let mut lex = Lexer::new(&(args[1]));
+    let parser = Parser::new(lex);
 
+    /*
     loop {
         match lex.scan() {
             Token::Word(a) => match a {
@@ -23,4 +26,5 @@ fn main() {
             Token::Eof => break,
         };
     }
+    */
 }

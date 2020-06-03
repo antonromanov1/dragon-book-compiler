@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 pub enum Tag {
     And = 256,
-    Basic,
+    Basic, // primitive types such as char, bool, int, float and array
     Break,
     Do,
     Else,
@@ -131,9 +131,26 @@ pub enum Token {
     Eof,
 }
 
+impl Token {
+    pub fn get_tag(&self) -> Option<u32> {
+        match &*self {
+            Token::Token(a) => Some(a.tag),
+            Token::Word(b) => {
+                match b {
+                    Word::Word(x) => Some(x.token.tag),
+                    Word::Type(y) => Some(y.word.token.tag),
+                }
+            }
+            Token::Num(c) => Some(c.token.tag),
+            Token::Real(d) => Some(d.token.tag),
+            _ => None
+        }
+    }
+}
+
 pub struct Lexer {
     buf_reader: BufReader<File>,
-    line_num: u32, // uses for syntax error reports
+    pub line_num: u32, // uses for syntax error reports
     line: String,
     peek: char,
     eof: bool,
