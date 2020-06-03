@@ -43,13 +43,100 @@ impl Parser {
             self.move_();
         }
         else {
-            self.error("syntax error");
+            self.error("syntax error1");
         }
     }
 
-    /*
-    pub fn program(&mut self) -> (HashMap<String, TypeBase>, *mut Node) {
-        (HashMap::new(), 0 as *mut Node)
+    fn match_word(&mut self, s: &str) {
+        match &self.look {
+            Token::Word(a) => {
+                match a {
+                    Word::Word(x) => {
+                        if &(x.lexeme) == s {
+                            self.move_();
+                        }
+                        else {
+                            self.error(&x.lexeme);
+                        }
+                    },
+                    Word::Type(y) => {
+                        if &(y.word.lexeme) == s {
+                            self.move_();
+                        }
+                        else {
+                            self.error("syntax error3");
+                        }
+                    }
+                };
+            },
+            _ => {
+                self.error("syntax error4");
+            }
+        }
     }
-    */
+
+    fn read_word(&self, s: &str) -> bool {
+        match &self.look {
+            Token::Word(a) => {
+                match a {
+                    Word::Word(x) => {
+                        if &x.lexeme == s {
+                            true
+                        }
+                        else {
+                            false
+                        }
+                    },
+                    Word::Type(y) => {
+                        if &y.word.lexeme == s {
+                            true
+                        }
+                        else {
+                            false
+                        }
+                    },
+                }
+            },
+            _ => {
+                self.error("syntax error5");
+                false
+            },
+        }
+    }
+
+    fn not_id(&self) -> String {
+        self.error("should be identifier here");
+        String::new()
+    }
+
+    pub fn program(&mut self) -> (u32, HashMap<String, TypeBase>, *mut Node) {
+        self.match_word("def");
+        self.match_word("main");
+        self.match_('(' as u32);
+        self.match_(')' as u32);
+        self.match_('{' as u32);
+
+        let mut id = String::new();
+        while self.read_word("let") {
+            self.match_word("let");
+            id = match &self.look {
+                Token::Word(a) => {
+                    match a {
+                        Word::Word(x) => {
+                            if x.token.tag == Tag::Id as u32 {
+                                x.lexeme.clone()
+                            }
+                            else {
+                                self.not_id()
+                            }
+                        },
+                        Word::Type(y) => self.not_id(),
+                    }
+                },
+                _ => self.not_id(),
+            };
+            self.match_(':' as u32);
+        }
+        (0, HashMap::new(), 0 as *mut Node)
+    }
 }

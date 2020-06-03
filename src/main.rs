@@ -10,7 +10,9 @@ fn main() {
         return ()
     }
     let mut lex = Lexer::new(&(args[1]));
-    let parser = Parser::new(lex);
+    let mut parser = Parser::new(lex);
+
+    parser.program();
 
     /*
     loop {

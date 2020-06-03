@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::Read;
 use std::collections::HashMap;
 
+/// This enumeration represents token types except for symbols such {, }, etc.
 pub enum Tag {
     And = 256,
     Basic, // primitive types such as char, bool, int, float and array
@@ -39,12 +40,12 @@ impl TokenBase {
 }
 
 pub struct WordBase {
-    token: TokenBase,
+    pub token: TokenBase,
     pub lexeme: String,
 }
 
-impl WordBase {
-    pub fn clone(&self) -> Self {
+impl Clone for WordBase {
+    fn clone(&self) -> Self {
         WordBase {
             token: TokenBase {
                 tag: self.token.tag,
@@ -114,8 +115,8 @@ impl Real {
 }
 
 pub struct TypeBase {
-    word: WordBase,
-    width: usize,
+    pub word: WordBase,
+    pub width: usize,
 }
 
 pub enum Word {
@@ -160,14 +161,17 @@ pub struct Lexer {
 impl Lexer {
     fn reserve(&mut self, w: Word) {
         match w {
-            Word::Word(x) => self.words.insert(x.lexeme.clone(), Word::Word(x)),
-            Word::Type(y) => self.words.insert(y.word.lexeme.clone(), Word::Type(y)),
+            Word::Word(x) => self.words.insert(x.lexeme.clone(),
+                                                    Word::Word(x)),
+            Word::Type(y) => self.words.insert(y.word.lexeme.clone(),
+                                                    Word::Type(y)),
         };
     }
 
     pub fn new(file_name: &str) -> Lexer {
         let mut lex = Lexer {
-            buf_reader: BufReader::new(File::open(file_name).expect("open failed")),
+            buf_reader: BufReader::new(File::open(file_name).
+                                                    expect("open failed")),
             line_num: 1,
             line: String::new(),
             peek: ' ',
