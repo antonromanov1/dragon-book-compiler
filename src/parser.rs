@@ -98,45 +98,91 @@ impl Parser {
                 }
             },
             _ => {
-                self.error("syntax error5");
+                // self.error("syntax error5");
                 false
             },
         }
     }
 
+    #[inline]
     fn not_id(&self) -> String {
         self.error("should be identifier here");
         String::new()
     }
 
+    #[inline]
+    fn exit_with_type_base(&self) -> TypeBase {
+        self.error("should be a type");
+        // empty structure, added only in order to satisfy
+        // rustc, needed because rustc does not care that
+        // Parser::error() exits the process
+        TypeBase {
+            word: WordBase {
+                token: TokenBase {
+                    tag: 0,
+                },
+            lexeme: String::new(),
+            },
+            width: 0,
+        }
+    }
+
     pub fn program(&mut self) -> (u32, HashMap<String, TypeBase>, *mut Node) {
+        let mut used: u32 = 0;
+        let mut variables = HashMap::<String, TypeBase>::new();
+
         self.match_word("def");
         self.match_word("main");
         self.match_('(' as u32);
         self.match_(')' as u32);
         self.match_('{' as u32);
 
-        let mut id = String::new();
+        /// variable declarations handling here
         while self.read_word("let") {
             self.match_word("let");
-            id = match &self.look {
-                Token::Word(a) => {
-                    match a {
+            let id = match &self.look {
+                Token::Word(x) => match x {
+                    Word::Word(a) => a.lexeme.clone(),
+                    _ => String::new(),
+                },
+                _ => String::new(),
+            };
+            self.match_(Tag::Id as u32);
+            self.match_(':' as u32);
+            let type_ = match &self.look {
+                Token::Word(a) => match a {
                         Word::Word(x) => {
-                            if x.token.tag == Tag::Id as u32 {
-                                x.lexeme.clone()
+                            let mut w: u8 = 0;
+                            if x.lexeme == "uint32" {
+                                w = 4;
                             }
-                            else {
-                                self.not_id()
+                            else if x.lexeme == "uint64" {
+                                w = 8;
+                            }
+
+                            used = used + w as u32;
+                            TypeBase {
+                                word: x.clone(),
+                                width: w,
                             }
                         },
-                        Word::Type(y) => self.not_id(),
-                    }
+                        _ => {
+                            self.exit_with_type_base()
+                        },
                 },
-                _ => self.not_id(),
+                _ => self.exit_with_type_base()
             };
-            self.match_(':' as u32);
+            self.move_();
+            self.match_(';' as u32);
+
+            variables.insert(id, type_);
         }
-        (0, HashMap::new(), 0 as *mut Node)
+
+        println!("used: {}", used);
+        for (id, type_) in &variables {
+            println!("{} -> {}", id, type_.width);
+        }
+
+        (used, variables, 0 as *mut Node)
     }
 }
