@@ -2,6 +2,7 @@ use crate::lexer::*;
 use std::collections::HashMap;
 
 enum Stmt {
+    Null,
     Print(String),
 }
 
@@ -9,7 +10,6 @@ pub struct Node {
     left: *mut Node,
     right: *mut Node,
     stmt: Stmt,
-    is_null: bool,
 }
 
 pub struct Parser {
@@ -127,6 +127,38 @@ impl Parser {
         }
     }
 
+    fn stmt(&mut self) -> *mut Node {
+        /*
+        match self.look.get_tag() {
+            ';' as u32 => {
+                self.move_();
+                0 as *mut Node
+            },
+
+            Tag::If
+        }
+         */
+        self.move_();
+        Box::into_raw(Box::new(Node {
+            left: 0 as *mut Node,
+            right: 0 as *mut Node,
+            stmt: Stmt::Print("".to_string()),
+        }))
+    }
+
+    fn stmts(&mut self) -> *mut Node {
+        match &self.look {
+            Token::Eof => 0 as *mut Node,
+            _ => {
+                Box::into_raw(Box::new(Node {
+                    left: self.stmt(),
+                    right: self.stmts(),
+                    stmt: Stmt::Null,
+                }))
+            },
+        }
+    }
+
     pub fn program(&mut self) -> (u32, HashMap<String, TypeBase>, *mut Node) {
         let mut used: u32 = 0;
         let mut variables = HashMap::<String, TypeBase>::new();
@@ -178,11 +210,8 @@ impl Parser {
             variables.insert(id, type_);
         }
 
-        println!("used: {}", used);
-        for (id, type_) in &variables {
-            println!("{} -> {}", id, type_.width);
-        }
+        let ast = self.stmts();
 
-        (used, variables, 0 as *mut Node)
+        (used, variables, ast)
     }
 }

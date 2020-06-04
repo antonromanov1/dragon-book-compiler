@@ -1,5 +1,6 @@
 mod lexer;
 mod parser;
+mod generate;
 use lexer::*;
 use parser::*;
 
@@ -12,21 +13,6 @@ fn main() {
     let mut lex = Lexer::new(&(args[1]));
     let mut parser = Parser::new(lex);
 
-    parser.program();
-
-    /*
-    loop {
-        match lex.scan() {
-            Token::Word(a) => match a {
-                Word::Word(y) => println!("    Word:{},", y.lexeme),
-                _ => (),
-            },
-            Token::Num(b) => println!("Integer:{},", b.value),
-            Token::Real(c) => println!("Real number:{},", c.value),
-            Token::Token(d) => println!("    Unknown token:{},",
-                                        std::char::from_u32(d.tag).unwrap()),
-            Token::Eof => break,
-        };
-    }
-    */
+    let set = parser.program();
+    generate::generate(set.0, set.1, set.2, &(args[1]));
 }
