@@ -7,8 +7,8 @@ enum Stmt {
 }
 
 pub struct Node {
-    left: *mut Node,
-    right: *mut Node,
+    left: Option<Box<Node>>,
+    right: Option<Box<Node>>,
     stmt: Stmt,
 }
 
@@ -127,30 +127,31 @@ impl Parser {
         }
     }
 
-    fn stmt(&mut self) -> *mut Node {
+    fn stmt(&mut self) -> Option<Box<Node>> {
         /*
         match self.look.get_tag() {
             ';' as u32 => {
                 self.move_();
-                0 as *mut Node
+                None
             },
 
             Tag::If
         }
          */
         self.move_();
-        Box::into_raw(Box::new(Node {
-            left: 0 as *mut Node,
-            right: 0 as *mut Node,
+        None
+        /*Some(Box::new(Node {
+            left: None,
+            right: None,
             stmt: Stmt::Print("".to_string()),
-        }))
+        }))*/
     }
 
-    fn stmts(&mut self) -> *mut Node {
+    fn stmts(&mut self) -> Option<Box<Node>> {
         match &self.look {
-            Token::Eof => 0 as *mut Node,
+            Token::Eof => None,
             _ => {
-                Box::into_raw(Box::new(Node {
+                Some(Box::new(Node {
                     left: self.stmt(),
                     right: self.stmts(),
                     stmt: Stmt::Null,
@@ -159,7 +160,7 @@ impl Parser {
         }
     }
 
-    pub fn program(&mut self) -> (u32, HashMap<String, TypeBase>, *mut Node) {
+    pub fn program(&mut self) -> (u32, HashMap<String, TypeBase>, Option<Box<Node>>) {
         let mut used: u32 = 0;
         let mut variables = HashMap::<String, TypeBase>::new();
 

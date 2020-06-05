@@ -5,7 +5,7 @@ use std::io::prelude::*;
 use std::fs::File;
 
 pub fn generate(bytes_used: u32, variables: HashMap::<String, TypeBase>,
-                ast: *mut Node, file_name: &str) -> std::io::Result<()> {
+                ast: Option<Box<Node>>, file_name: &str) -> std::io::Result<()> {
     let v: Vec<&str> = file_name.split('.').collect();
     let mut output_name = String::from(v[0]);
     output_name.push_str(".s");
