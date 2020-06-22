@@ -6,7 +6,7 @@ Izber is a compiler which generates assembly code from high level code
 
 Izber, short for Izberbash, a city in the South of Russia
 
-# Example of the source program
+# Example of the source program (Now Izber can compile only declarations)
 
 ```
 def main() {
