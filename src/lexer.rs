@@ -6,25 +6,25 @@ use std::collections::HashMap;
 /// This enumeration represents token types except for symbols such {, }, etc.
 pub enum Tag {
     And = 256,
-    Basic, // primitive types such as char, bool, int, float and array
-    Break,
-    Do,
+    // Basic, // primitive types such as char, bool, int, float and array
+    // Break,
+    // Do,
     Else,
     Eq_,
-    False,
-    Ge,
+    // False,
+    // Ge,
     Id,
     If,
-    Index,
-    Le,
-    Minus,
-    Ne,
+    // Index,
+    // Le,
+    // Minus,
+    // Ne,
     Num,
     Or,
     Real,
-    Temp,
-    True,
-    While,
+    // Temp,
+    // True,
+    // While,
 }
 
 pub struct TokenBase {
@@ -121,7 +121,7 @@ pub struct TypeBase {
 
 pub enum Word {
     Word(WordBase),
-    Type(TypeBase),
+    // Type(TypeBase),
 }
 
 pub enum Token {
@@ -139,7 +139,7 @@ impl Token {
             Token::Word(b) => {
                 match b {
                     Word::Word(x) => Some(x.token.tag),
-                    Word::Type(y) => Some(y.word.token.tag),
+                    // Word::Type(y) => Some(y.word.token.tag),
                 }
             }
             Token::Num(c) => Some(c.token.tag),
@@ -152,7 +152,7 @@ impl Token {
 pub struct Lexer {
     buf_reader: BufReader<File>,
     pub line_num: u32, // uses for syntax error reports
-    line: String,
+    // line: String,
     peek: char,
     eof: bool,
     words: HashMap<String, Word>
@@ -163,8 +163,8 @@ impl Lexer {
         match w {
             Word::Word(x) => self.words.insert(x.lexeme.clone(),
                                                     Word::Word(x)),
-            Word::Type(y) => self.words.insert(y.word.lexeme.clone(),
-                                                    Word::Type(y)),
+            // Word::Type(y) => self.words.insert(y.word.lexeme.clone(),
+                                                    // Word::Type(y)),
         };
     }
 
@@ -173,7 +173,7 @@ impl Lexer {
             buf_reader: BufReader::new(File::open(file_name).
                                                     expect("open failed")),
             line_num: 1,
-            line: String::new(),
+            // line: String::new(),
             peek: ' ',
             eof: false,
             words: HashMap::new(),
@@ -300,7 +300,7 @@ impl Lexer {
                 Some(x) => {
                     let w = match x {
                         Word::Word(y) => y.clone(),
-                        Word::Type(z) => z.word.clone(),
+                        // Word::Type(z) => z.word.clone(),
                     };
                     return Token::Word(Word::Word(w));
                 }

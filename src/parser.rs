@@ -59,14 +59,14 @@ impl Parser {
                             self.error(&x.lexeme);
                         }
                     },
-                    Word::Type(y) => {
+                    /*Word::Type(y) => {
                         if &(y.word.lexeme) == s {
                             self.move_();
                         }
                         else {
                             self.error("syntax error3");
                         }
-                    }
+                    }*/
                 };
             },
             _ => {
@@ -87,14 +87,14 @@ impl Parser {
                             false
                         }
                     },
-                    Word::Type(y) => {
+                    /* Word::Type(y) => {
                         if &y.word.lexeme == s {
                             true
                         }
                         else {
                             false
                         }
-                    },
+                    },*/
                 }
             },
             _ => {
@@ -170,13 +170,13 @@ impl Parser {
         self.match_(')' as u32);
         self.match_('{' as u32);
 
-        /// variable declarations handling here
+        // variable declarations handling here
         while self.read_word("let") {
             self.match_word("let");
             let id = match &self.look {
                 Token::Word(x) => match x {
                     Word::Word(a) => a.lexeme.clone(),
-                    _ => String::new(),
+                    // _ => String::new(),
                 },
                 _ => String::new(),
             };
@@ -199,9 +199,9 @@ impl Parser {
                                 width: w,
                             }
                         },
-                        _ => {
+                        /*_ => {
                             self.exit_with_type_base()
-                        },
+                        },*/
                 },
                 _ => self.exit_with_type_base()
             };
