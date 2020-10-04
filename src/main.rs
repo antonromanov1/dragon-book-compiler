@@ -10,7 +10,7 @@ fn main() {
         println!("Lexical analyzer needs 1 argument - source file name");
         return ()
     }
-    let mut lex = Lexer::new(&(args[1]));
+    let lex = Lexer::new(&(args[1]));
     let mut parser = Parser::new(lex);
 
     let set = parser.program();
