@@ -34,7 +34,7 @@ impl Parser {
         p
     }
 
-    fn error(&self, s: &str) {
+    fn error(&self, s: &str) -> ! {
         println!("Near line {}: {}", self.lex.line_num, s);
         std::process::exit(0);
     }
@@ -109,24 +109,6 @@ impl Parser {
     #[allow(dead_code)]
     fn not_id(&self) -> String {
         self.error("should be identifier here");
-        String::new()
-    }
-
-    #[inline]
-    fn exit_with_type_base(&self) -> TypeBase {
-        self.error("should be a type");
-        // empty structure, added only in order to satisfy
-        // rustc, needed because rustc does not care that
-        // Parser::error() exits the process
-        TypeBase {
-            word: WordBase {
-                token: TokenBase {
-                    tag: 0,
-                },
-            lexeme: String::new(),
-            },
-            width: 0,
-        }
     }
 
     fn stmt(&mut self) -> Option<Box<Node>> {
@@ -194,11 +176,8 @@ impl Parser {
                             width: w,
                         }
                     },
-                    /*_ => {
-                        self.exit_with_type_base()
-                    },*/
                 },
-                _ => self.exit_with_type_base()
+                _ => self.error("Should be a type")
             };
             self.move_();
             self.match_(';' as u32);
