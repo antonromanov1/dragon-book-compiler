@@ -162,17 +162,10 @@ impl Parser {
         }
     }
 
-    pub fn program(&mut self) -> (u32, HashMap<String, TypeBase>, Option<Box<Node>>) {
-        let mut used: u32 = 0;
-        let mut variables = HashMap::<String, TypeBase>::new();
-
-        self.match_word("def");
-        self.match_word("main");
-        self.match_('(' as u32);
-        self.match_(')' as u32);
-        self.match_('{' as u32);
-
-        // variable declarations handling here
+    /// variable declarations handling here
+    #[inline]
+    fn declarations(&mut self, used: &mut usize,
+                    variables: &mut HashMap::<String, TypeBase>) {
         while self.read_word("let") {
             self.match_word("let");
             let id = match &self.look {
@@ -187,7 +180,7 @@ impl Parser {
             let type_ = match &self.look {
                 Token::Word(a) => match a {
                     Word::Word(x) => {
-                        let mut w: u8 = 0;
+                        let mut w: usize = 0;
                         if x.lexeme == "uint32" {
                             w = 4;
                         }
@@ -195,7 +188,7 @@ impl Parser {
                             w = 8;
                         }
 
-                        used = used + w as u32;
+                        *used = *used + w;
                         TypeBase {
                             word: x.clone(),
                             width: w,
@@ -212,6 +205,19 @@ impl Parser {
 
             variables.insert(id, type_);
         }
+    }
+
+    pub fn program(&mut self) -> (usize, HashMap<String, TypeBase>, Option<Box<Node>>) {
+        let mut used: usize = 0;
+        let mut variables = HashMap::<String, TypeBase>::new();
+
+        self.match_word("def");
+        self.match_word("main");
+        self.match_('(' as u32);
+        self.match_(')' as u32);
+        self.match_('{' as u32);
+
+        self.declarations(&mut used, &mut variables);
 
         let ast = self.stmts();
 

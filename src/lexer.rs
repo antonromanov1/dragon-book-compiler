@@ -116,7 +116,7 @@ impl Real {
 
 pub struct TypeBase {
     pub word: WordBase,
-    pub width: u8,
+    pub width: usize,
 }
 
 pub enum Word {
