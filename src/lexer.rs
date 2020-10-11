@@ -32,7 +32,7 @@ pub struct TokenBase {
 }
 
 impl TokenBase {
-    fn new(c: char) ->TokenBase {
+    fn new(c: char) -> TokenBase {
         TokenBase {
             tag: c as u32,
         }
