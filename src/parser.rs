@@ -186,24 +186,24 @@ impl Parser {
             self.match_(':' as u32);
             let type_ = match &self.look {
                 Token::Word(a) => match a {
-                        Word::Word(x) => {
-                            let mut w: u8 = 0;
-                            if x.lexeme == "uint32" {
-                                w = 4;
-                            }
-                            else if x.lexeme == "uint64" {
-                                w = 8;
-                            }
+                    Word::Word(x) => {
+                        let mut w: u8 = 0;
+                        if x.lexeme == "uint32" {
+                            w = 4;
+                        }
+                        else if x.lexeme == "uint64" {
+                            w = 8;
+                        }
 
-                            used = used + w as u32;
-                            TypeBase {
-                                word: x.clone(),
-                                width: w,
-                            }
-                        },
-                        /*_ => {
-                            self.exit_with_type_base()
-                        },*/
+                        used = used + w as u32;
+                        TypeBase {
+                            word: x.clone(),
+                            width: w,
+                        }
+                    },
+                    /*_ => {
+                        self.exit_with_type_base()
+                    },*/
                 },
                 _ => self.exit_with_type_base()
             };
