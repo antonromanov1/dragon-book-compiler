@@ -3,9 +3,10 @@ use std::collections::HashMap;
 
 enum Stmt {
     Null,
-    Print(String),
+    // Print(String),
 }
 
+#[allow(dead_code)]
 pub struct Node {
     left: Option<Box<Node>>,
     right: Option<Box<Node>>,
@@ -105,6 +106,7 @@ impl Parser {
     }
 
     #[inline]
+    #[allow(dead_code)]
     fn not_id(&self) -> String {
         self.error("should be identifier here");
         String::new()

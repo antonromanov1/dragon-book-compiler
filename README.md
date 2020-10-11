@@ -26,7 +26,7 @@ Secondly create source file called `input.iz` and insert code from the example
 
 Compiling source:
 ```bash
-./izber input.iz
+./target/debug/izber input.iz
 ```
 
 Assembling Izber's output:
@@ -34,7 +34,7 @@ Assembling Izber's output:
 gcc input.s -o input
 ```
 
-Run the generated (by assembler) file:
+Run the generated (by the assembler) file:
 ```bash
 ./input
 ```

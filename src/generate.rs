@@ -18,12 +18,12 @@ pub fn generate(bytes_used: u32, _variables: HashMap::<String, TypeBase>,
 
     file.write_all(b"    sub $")?;
     let s = format!("{}", bytes_used);
-    file.write_all(&(s.clone()).into_bytes());
-    file.write_all(b", %rsp\n");
+    file.write_all(&(s.clone()).into_bytes())?;
+    file.write_all(b", %rsp\n")?;
 
-    file.write_all(b"    add $");
-    file.write_all(&s.into_bytes());
-    file.write_all(b", %rsp\n");
+    file.write_all(b"    add $")?;
+    file.write_all(&s.into_bytes())?;
+    file.write_all(b", %rsp\n")?;
 
     file.write_all(b"    ret\n")?;
 
