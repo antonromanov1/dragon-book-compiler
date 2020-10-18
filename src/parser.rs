@@ -1,9 +1,14 @@
 use crate::lexer::*;
 use std::collections::HashMap;
 
+#[allow(dead_code)]
+struct Set {
+    id: String,
+}
+
 enum Stmt {
     Null,
-    // Print(String),
+    // Assign(Set),
 }
 
 #[allow(dead_code)]
@@ -111,19 +116,26 @@ impl Parser {
         self.error("should be identifier here");
     }
 
-    fn stmt(&mut self) -> Option<Box<Node>> {
-        /*
-        match self.look.get_tag() {
-            ';' as u32 => {
-                self.move_();
-                None
+    fn stmt(&mut self, variables: &HashMap<String, TypeBase>)
+        -> Option<Box<Node>> {
+        match &self.look {
+            Token::Word(w) => {
+                match w {
+                    Word::Word(wo) => {
+                        match variables.get(&wo.lexeme) {
+                            Some(_x) => self.move_(),
+                            None => panic!("{}: no variable", wo.lexeme),
+                        }
+                    },
+                }
             },
-
-            Tag::If
+            _ => self.move_(),
         }
-         */
-        self.move_();
         None
+
+        /*self.move_();
+        None*/
+
         /*Some(Box::new(Node {
             left: None,
             right: None,
@@ -131,13 +143,14 @@ impl Parser {
         }))*/
     }
 
-    fn stmts(&mut self) -> Option<Box<Node>> {
+    fn stmts(&mut self, variables: &HashMap<String, TypeBase>)
+        -> Option<Box<Node>> {
         match &self.look {
             Token::Eof => None,
             _ => {
                 Some(Box::new(Node {
-                    left: self.stmt(),
-                    right: self.stmts(),
+                    left: self.stmt(&variables),
+                    right: self.stmts(&variables),
                     stmt: Stmt::Null,
                 }))
             },
@@ -155,6 +168,7 @@ impl Parser {
                     Word::Word(a) => a.lexeme.clone(),
                     // _ => String::new(),
                 },
+                // TODO: String::new() is wrong, should be replaced
                 _ => String::new(),
             };
             self.match_(Tag::Id as u32);
@@ -198,7 +212,7 @@ impl Parser {
 
         self.declarations(&mut used, &mut variables);
 
-        let ast = self.stmts();
+        let ast = self.stmts(&variables);
 
         (used, variables, ast)
     }
