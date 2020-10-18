@@ -260,6 +260,7 @@ impl Lexer {
             _ => (),
         }
 
+        // Number handling
         if self.peek.is_digit(10) {
             let mut v: u32 = 0;
             loop {
@@ -285,6 +286,7 @@ impl Lexer {
             return Token::Real(Real::new(x))
         }
 
+        // Word handle
         if self.peek.is_alphabetic() {
             let mut s = String::new();
             loop {
