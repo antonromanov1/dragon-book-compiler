@@ -40,7 +40,7 @@ impl Parser {
     }
 
     fn error(&self, s: &str) -> ! {
-        println!("Near line {}: {}", self.lex.line_num, s);
+        println!("Syntax error near line {}: {}", self.lex.line_num, s);
         std::process::exit(0);
     }
 
@@ -62,7 +62,9 @@ impl Parser {
                             self.move_();
                         }
                         else {
-                            self.error(&x.lexeme);
+                            print!("Syntax error near line {}: ", self.lex.line_num);
+                            println!("{}, expected '{}'", &x.lexeme, s);
+                            std::process::exit(0);
                         }
                     },
                     /*Word::Type(y) => {
