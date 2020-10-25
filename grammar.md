@@ -1,5 +1,7 @@
 # Context-free grammar
 
+Nonterminals are highlighted
+
 `program` -> def main { `decls` `stmts` }
 
 ## Declarations
