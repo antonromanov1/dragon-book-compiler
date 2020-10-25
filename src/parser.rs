@@ -203,10 +203,7 @@ impl Parser {
                         }
 
                         *used = *used + w;
-                        TypeBase {
-                            word: x.clone(),
-                            width: w,
-                        }
+                        TypeBase::new(x.clone(), w)
                     },
                 },
                 _ => self.error("Should be a type")
