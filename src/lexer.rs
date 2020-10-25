@@ -116,7 +116,21 @@ impl Real {
 
 pub struct TypeBase {
     pub word: WordBase,
-    pub width: usize,
+    width: usize,
+}
+
+impl TypeBase {
+    pub fn new(w: WordBase, wid: usize) -> TypeBase {
+        TypeBase {
+            word: w,
+            width: wid,
+        }
+    }
+
+    #[inline]
+    pub fn get_width(&self) -> usize {
+        self.width
+    }
 }
 
 pub enum Word {
