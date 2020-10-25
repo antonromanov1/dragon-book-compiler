@@ -40,17 +40,31 @@ impl Parser {
     }
 
     fn error(&self, s: &str) -> ! {
-        println!("Syntax error near line {}: {}", self.lex.line_num, s);
+        println!("Syntax error on line {}: {}", self.lex.line_num, s);
+        std::process::exit(0);
+    }
+
+    fn expected(&self, s: &str, expected: &str) -> ! {
+        print!("Syntax error near line {}: ", self.lex.line_num);
+        println!("{}, expected '{}'", s, expected);
         std::process::exit(0);
     }
 
     fn match_(&mut self, t: u32) {
-        if self.look.get_tag() == Some(t) {
-            self.move_();
-        }
-        else {
-            self.error("syntax error1");
-        }
+        match self.look.get_tag() {
+            Some(a) => {
+                if a == t {
+                    self.move_();
+                }
+                else {
+                    // A temporary decision, tag is 4 bytes, bad cast
+                    // TODO
+                    self.expected(&format!("{}", (a as u8) as char),
+                                  &format!("{}", (t as u8) as char));
+                }
+            },
+            _ => panic!("Unexpected event"),
+        };
     }
 
     fn match_word(&mut self, s: &str) {
@@ -62,9 +76,7 @@ impl Parser {
                             self.move_();
                         }
                         else {
-                            print!("Syntax error near line {}: ", self.lex.line_num);
-                            println!("{}, expected '{}'", &x.lexeme, s);
-                            std::process::exit(0);
+                            self.expected(&x.lexeme, s);
                         }
                     },
                     /*Word::Type(y) => {
@@ -178,12 +190,16 @@ impl Parser {
             let type_ = match &self.look {
                 Token::Word(a) => match a {
                     Word::Word(x) => {
-                        let mut w: usize = 0;
+                        let w: usize;
                         if x.lexeme == "uint32" {
                             w = 4;
                         }
                         else if x.lexeme == "uint64" {
                             w = 8;
+                        }
+                        else {
+                            println!("Unknown type {}", x.lexeme);
+                            std::process::exit(0);
                         }
 
                         *used = *used + w;
