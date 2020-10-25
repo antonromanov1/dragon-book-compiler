@@ -14,6 +14,7 @@ fn main() {
     let mut parser = Parser::new(lex);
 
     let set = parser.program();
+
     let start = std::time::Instant::now();
     match generate::generate(set.0, set.1, set.2, &(args[1])) {
         Ok(_v) => {
