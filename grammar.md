@@ -6,7 +6,9 @@ Nonterminals are highlighted
 
 ## Declarations
 
-`decls` -> let `identifier`: `type`;
+`decls` -> `decls` `decl` | ε
+
+`decl` -> let `identifier`: `type`;
 
 `identifier` -> `latin_letters` `digits`
 
