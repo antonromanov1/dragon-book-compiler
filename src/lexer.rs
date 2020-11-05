@@ -4,6 +4,7 @@ use std::io::Read;
 use std::collections::HashMap;
 
 /// This enumeration represents token types except for symbols such {, }, etc.
+#[allow(dead_code)]
 pub enum Tag {
     And = 256,
     // Basic, // primitive types such as char, bool, int, float and array
@@ -27,10 +28,12 @@ pub enum Tag {
     // While,
 }
 
+#[allow(dead_code)]
 pub struct TokenBase {
     pub tag: u32,
 }
 
+#[allow(dead_code)]
 impl TokenBase {
     fn new(c: char) -> TokenBase {
         TokenBase {
@@ -39,11 +42,13 @@ impl TokenBase {
     }
 }
 
+#[allow(dead_code)]
 pub struct WordBase {
     pub token: TokenBase,
     pub lexeme: String,
 }
 
+#[allow(dead_code)]
 impl Clone for WordBase {
     fn clone(&self) -> Self {
         WordBase {
@@ -55,6 +60,7 @@ impl Clone for WordBase {
     }
 }
 
+#[allow(dead_code)]
 fn word_and() -> WordBase {
     WordBase {
         token: TokenBase {
@@ -64,6 +70,7 @@ fn word_and() -> WordBase {
     }
 }
 
+#[allow(dead_code)]
 fn word_or() -> WordBase {
     WordBase {
         token: TokenBase {
@@ -73,6 +80,7 @@ fn word_or() -> WordBase {
     }
 }
 
+#[allow(dead_code)]
 fn word_eq() -> WordBase {
     WordBase {
         token: TokenBase {
@@ -82,11 +90,13 @@ fn word_eq() -> WordBase {
     }
 }
 
+#[allow(dead_code)]
 pub struct Num {
     token: TokenBase,
     pub value: u32,
 }
 
+#[allow(dead_code)]
 impl Num {
     pub fn new(v: u32) -> Num {
         Num {
@@ -98,11 +108,13 @@ impl Num {
     }
 }
 
+#[allow(dead_code)]
 pub struct Real {
     token: TokenBase,
     pub value: f32,
 }
 
+#[allow(dead_code)]
 impl Real {
     pub fn new(v: f32) -> Real {
         Real {
@@ -114,11 +126,13 @@ impl Real {
     }
 }
 
+#[allow(dead_code)]
 pub struct TypeBase {
     pub word: WordBase,
     width: usize,
 }
 
+#[allow(dead_code)]
 impl TypeBase {
     pub fn new(w: WordBase, wid: usize) -> TypeBase {
         TypeBase {
@@ -133,11 +147,13 @@ impl TypeBase {
     }
 }
 
+#[allow(dead_code)]
 pub enum Word {
     Word(WordBase),
-    // Type(TypeBase),
+    Type(TypeBase),
 }
 
+#[allow(dead_code)]
 pub enum Token {
     Token(TokenBase),
     Word(Word),
@@ -146,6 +162,7 @@ pub enum Token {
     Eof,
 }
 
+#[allow(dead_code)]
 impl Token {
     pub fn get_tag(&self) -> Option<u32> {
         match &*self {
@@ -153,16 +170,36 @@ impl Token {
             Token::Word(b) => {
                 match b {
                     Word::Word(x) => Some(x.token.tag),
-                    // Word::Type(y) => Some(y.word.token.tag),
+                    Word::Type(y) => Some(y.word.token.tag),
                 }
-            }
+            } // TODO: find out why comma is not here
             Token::Num(c) => Some(c.token.tag),
             Token::Real(d) => Some(d.token.tag),
             _ => None
         }
     }
+
+    pub fn to_string(&self) -> String {
+        match &*self {
+            Token::Token(a) => {
+                let mut s = String::new();
+                s.push(std::char::from_u32(a.tag).unwrap());
+                s
+            },
+            Token::Word(b) => {
+                match b {
+                    Word::Word(x) => x.lexeme.clone(),
+                    Word::Type(y) => y.word.lexeme.clone(),
+                }
+            },
+            Token::Num(c) => format!("{}", c.value),
+            Token::Real(d) => format!("{}", d.value),
+            _ => panic!(),
+        }
+    }
 }
 
+#[allow(dead_code)]
 pub struct Lexer {
     buf_reader: BufReader<File>,
     pub line_num: u32, // uses for syntax error reports
@@ -172,13 +209,14 @@ pub struct Lexer {
     words: HashMap<String, Word>
 }
 
+#[allow(dead_code)]
 impl Lexer {
     fn reserve(&mut self, w: Word) {
         match w {
             Word::Word(x) => self.words.insert(x.lexeme.clone(),
                                                     Word::Word(x)),
-            // Word::Type(y) => self.words.insert(y.word.lexeme.clone(),
-                                                    // Word::Type(y)),
+            Word::Type(y) => self.words.insert(y.word.lexeme.clone(),
+                                                    Word::Type(y)),
         };
     }
 
@@ -316,7 +354,7 @@ impl Lexer {
                 Some(x) => {
                     let w = match x {
                         Word::Word(y) => y.clone(),
-                        // Word::Type(z) => z.word.clone(),
+                        Word::Type(z) => z.word.clone(),
                     };
                     return Token::Word(Word::Word(w));
                 }
