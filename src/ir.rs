@@ -1,3 +1,6 @@
+use std::rc::Rc;
+use std::cell::RefCell;
+
 use crate::lexer::*;
 
 #[allow(dead_code)]
@@ -51,8 +54,8 @@ enum Expr {
 }
 
 trait ExprAble {
-    fn gen(&self, temp_count: &mut u8) -> Box<dyn ExprAble>;
-    fn reduce(&self, temp_count: &mut u8) -> Box<dyn ExprAble>;
+    fn gen(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble>;
+    fn reduce(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble>;
     fn jumping(&self, t: u32, f: u32);
     fn emit_jumps(&self, test: String, t: u32, f: u32);
     fn to_string(&self) -> String;
@@ -89,11 +92,11 @@ impl Clone for ExprBase {
 }
 
 impl ExprAble for ExprBase {
-    fn gen(&self, _temp_count: &mut u8) -> Box<dyn ExprAble> {
+    fn gen(&self, _temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
         Box::new(self.clone())
     }
 
-    fn reduce(&self, _temp_count: &mut u8) -> Box<dyn ExprAble> {
+    fn reduce(&self, _temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
         Box::new(self.clone())
     }
 
@@ -137,9 +140,11 @@ struct Temp {
 
 #[allow(dead_code)]
 impl Temp {
-    fn new(p: TypeBase, temp_count: &mut u8) -> Temp {
-        *temp_count = *temp_count + 1;
-        let num = *temp_count;
+    fn new(p: TypeBase, temp_count: Rc<RefCell<u8>>) -> Temp {
+        {
+            let mut reference = temp_count.borrow_mut();
+            *reference = *reference + 1;
+        }
         Temp {
             expr_base: ExprBase {
                 op: Token::Word(Word::Word(WordBase {
@@ -150,15 +155,38 @@ impl Temp {
                 })),
                 type_: Some(p),
             },
-            number: num,
+            number: *temp_count.borrow(),
         }
     }
 }
 
-/*
 impl ExprAble for Temp {
+    fn to_string(&self) -> String {
+        format!("t{}", self.number)
+    }
+
+    // Explicitly inherited:
+
+    fn gen(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
+        self.expr_base.gen(temp_count)
+    }
+
+    fn reduce(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
+        self.expr_base.reduce(temp_count)
+    }
+
+    fn jumping(&self, t: u32, f: u32) {
+        self.expr_base.jumping(t, f);
+    }
+
+    fn emit_jumps(&self, test: String, t: u32, f: u32) {
+        self.expr_base.emit_jumps(test, t, f);
+    }
+
+    fn get_type(&self) -> &Option<TypeBase> {
+        &self.expr_base.type_
+    }
 }
-*/
 
 #[allow(dead_code)]
 struct OpBase {
@@ -175,15 +203,16 @@ impl OpBase {
 }
 
 impl ExprAble for OpBase {
-    fn reduce(&self, temp_count: &mut u8) -> Box<dyn ExprAble> {
-        let x = self.gen(temp_count);
-        // TODO: implement Temp
-        x
+    fn reduce(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
+        let x = self.gen(temp_count.clone());
+        let t = Box::new(Temp::new((*self.get_type()).as_ref().unwrap().clone(), temp_count));
+        emit(format!("{} = {}", t.to_string(), x.to_string()));
+        t
     }
 
     // Inherited:
 
-    fn gen(&self, temp_count: &mut u8) -> Box<dyn ExprAble> {
+    fn gen(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
         self.expr_base.gen(temp_count)
     }
 
@@ -239,7 +268,7 @@ impl ArithBase {
 }
 
 impl ExprAble for ArithBase {
-    fn gen(&self, temp_count: &mut u8) -> Box<dyn ExprAble> {
+    fn gen(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
         Box::new(ArithBase {
             op_base: OpBase {
                 expr_base: ExprBase {
@@ -250,7 +279,7 @@ impl ExprAble for ArithBase {
                     },
                 },
             },
-            expr1: self.expr1.reduce(temp_count),
+            expr1: self.expr1.reduce(temp_count.clone()),
             expr2: self.expr2.reduce(temp_count),
             line: self.line,
         })
@@ -266,7 +295,7 @@ impl ExprAble for ArithBase {
 
     // Explicitly inherited:
 
-    fn reduce(&self, temp_count: &mut u8) -> Box<dyn ExprAble> {
+    fn reduce(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
         self.op_base.reduce(temp_count)
     }
 
