@@ -6,6 +6,7 @@ pub struct Parser {
     lex: Lexer,
     look: Token,
     enclosing: Option<Box<dyn StmtAble>>,
+    temp_count: u8,
 }
 
 #[allow(dead_code)]
@@ -21,6 +22,7 @@ impl Parser {
                 tag: 0,
             }),
             enclosing: None,
+            temp_count: 0,
         };
         p.move_();
         p

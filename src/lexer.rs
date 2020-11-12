@@ -7,7 +7,7 @@ use std::collections::HashMap;
 #[allow(dead_code)]
 pub enum Tag {
     And = 256,
-    // Basic, // primitive types such as char, bool, int, float and array
+    Basic, // primitive types such as char, bool, int, float and array
     // Break,
     // Do,
     Else,
@@ -23,7 +23,7 @@ pub enum Tag {
     Num,
     Or,
     Real,
-    // Temp,
+    Temp,
     // True,
     // While,
 }
@@ -35,9 +35,9 @@ pub struct TokenBase {
 
 #[allow(dead_code)]
 impl TokenBase {
-    fn new(c: char) -> TokenBase {
+    fn new(c: u32) -> TokenBase {
         TokenBase {
-            tag: c as u32,
+            tag: c,
         }
     }
 }
@@ -46,6 +46,15 @@ impl TokenBase {
 pub struct WordBase {
     pub token: TokenBase,
     pub lexeme: String,
+}
+
+impl WordBase {
+    pub fn new(s: String, tag: u32) -> WordBase {
+        WordBase {
+            token: TokenBase::new(tag),
+            lexeme: s,
+        }
+    }
 }
 
 #[allow(dead_code)]
@@ -60,6 +69,7 @@ impl Clone for WordBase {
     }
 }
 
+#[inline]
 #[allow(dead_code)]
 fn word_and() -> WordBase {
     WordBase {
@@ -70,6 +80,7 @@ fn word_and() -> WordBase {
     }
 }
 
+#[inline]
 #[allow(dead_code)]
 fn word_or() -> WordBase {
     WordBase {
@@ -80,6 +91,7 @@ fn word_or() -> WordBase {
     }
 }
 
+#[inline]
 #[allow(dead_code)]
 fn word_eq() -> WordBase {
     WordBase {
@@ -132,6 +144,58 @@ pub struct TypeBase {
     width: usize,
 }
 
+impl PartialEq for TypeBase {
+    fn eq(&self, other: &Self) -> bool {
+        if self.word.token.tag != other.word.token.tag {
+            return false;
+        }
+        true
+    }
+}
+
+#[inline]
+pub fn type_int() -> TypeBase {
+    TypeBase {
+        word: WordBase::new("int".to_string(), Tag::Basic as u32),
+        width: 4,
+    }
+}
+
+#[inline]
+pub fn type_float() -> TypeBase {
+    TypeBase {
+        word: WordBase::new("float".to_string(), Tag::Basic as u32),
+        width: 8,
+    }
+}
+
+#[inline]
+pub fn type_char() -> TypeBase {
+    TypeBase {
+        word: WordBase::new("char".to_string(), Tag::Basic as u32),
+        width: 1,
+    }
+}
+
+#[inline]
+#[allow(dead_code)]
+pub fn type_bool() -> TypeBase {
+    TypeBase {
+        word: WordBase::new("bool".to_string(), Tag::Basic as u32),
+        width: 1,
+    }
+}
+
+#[inline]
+fn numeric(p: &TypeBase) -> bool {
+    if *p == type_int() || *p == type_float() {
+        true
+    }
+    else {
+        false
+    }
+}
+
 #[allow(dead_code)]
 impl TypeBase {
     pub fn new(w: WordBase, wid: usize) -> TypeBase {
@@ -144,6 +208,30 @@ impl TypeBase {
     #[inline]
     pub fn get_width(&self) -> usize {
         self.width
+    }
+
+    pub fn max(p1: &TypeBase, p2: &TypeBase) -> Option<TypeBase> {
+        if ! numeric(p1) || ! numeric(p2) {
+            None
+        }
+        else if *p1 == type_float() || *p2 == type_float() {
+            Some(type_float())
+        }
+        else if *p1 == type_int() || *p2 == type_int() {
+            Some(type_int())
+        }
+        else {
+            Some(type_char())
+        }
+    }
+}
+
+impl Clone for TypeBase {
+    fn clone(&self) -> Self {
+        TypeBase {
+            word: self.word.clone(),
+            width: self.width,
+        }
     }
 }
 
@@ -195,6 +283,45 @@ impl Token {
             Token::Num(c) => format!("{}", c.value),
             Token::Real(d) => format!("{}", d.value),
             _ => panic!(),
+        }
+    }
+}
+
+impl Clone for Token {
+    fn clone(&self) -> Self {
+        match &*self {
+            Token::Token(tok) => {
+                Token::Token(TokenBase {
+                    tag: tok.tag,
+                })
+            },
+            Token::Word(word) => {
+                match word {
+                    Word::Word(word_base) => {
+                        Token::Word(Word::Word(word_base.clone()))
+                    },
+                    Word::Type(type_base) => {
+                        Token::Word(Word::Type(type_base.clone()))
+                    },
+                }
+            },
+            Token::Num(num) => {
+                Token::Num(Num {
+                    token: TokenBase {
+                        tag: num.token.tag,
+                    },
+                    value: num.value,
+                })
+            }
+            Token::Real(real) => {
+                Token::Real(Real {
+                    token: TokenBase {
+                        tag: real.token.tag,
+                    },
+                    value: real.value,
+                })
+            }
+            _ => panic!("token clone"),
         }
     }
 }
@@ -295,19 +422,19 @@ impl Lexer {
                 return Token::Word(Word::Word(word_and()))
             }
             else {
-                return Token::Token(TokenBase::new('&'))
+                return Token::Token(TokenBase::new('&' as u32))
             },
             '|' => if self.readch('|') {
                 return Token::Word(Word::Word(word_or()))
             }
             else {
-                return Token::Token(TokenBase::new('|'))
+                return Token::Token(TokenBase::new('|' as u32))
             },
             '=' => if self.readch('=') {
                 return Token::Word(Word::Word(word_eq()))
             }
             else {
-                return Token::Token(TokenBase::new('='))
+                return Token::Token(TokenBase::new('=' as u32))
             },
             _ => (),
         }
@@ -371,7 +498,7 @@ impl Lexer {
             }
         }
 
-        let tok = Token::Token(TokenBase::new(self.peek));
+        let tok = Token::Token(TokenBase::new(self.peek as u32));
         self.peek = ' ';
         tok
     }

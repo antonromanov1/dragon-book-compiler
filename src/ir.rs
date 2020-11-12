@@ -13,7 +13,7 @@ impl Node {
         }
     }
 
-    fn error(&self, s: String) -> ! {
+    fn error(&self, s: &str) -> ! {
         println!("near line {}: {}", self.lexer_line, s);
         std::process::exit(0);
     }
@@ -47,27 +47,28 @@ enum Expr {
         expr: ExprBase,
         offset: u32,
     },
-    Logical(Box<Logical>),
-    // Op(),
+    Op(Op),
 }
 
 trait ExprAble {
-    fn gen(&self) -> *const dyn ExprAble where Self: Sized;
-    fn reduce(&self) -> *const dyn ExprAble where Self: Sized;
+    fn gen(&self, temp_count: &mut u8) -> Box<dyn ExprAble>;
+    fn reduce(&self, temp_count: &mut u8) -> Box<dyn ExprAble>;
     fn jumping(&self, t: u32, f: u32);
     fn emit_jumps(&self, test: String, t: u32, f: u32);
     fn to_string(&self) -> String;
+
+    fn get_type(&self) -> &Option<TypeBase>;
 }
 
 #[allow(dead_code)]
 struct ExprBase {
     op: Token,
-    type_: Option<Box<TypeBase>>,
+    type_: Option<TypeBase>,
 }
 
 impl ExprBase {
     #[allow(dead_code)]
-    fn new(tok: Token, p: Option<Box<TypeBase>>) -> ExprBase {
+    fn new(tok: Token, p: Option<TypeBase>) -> ExprBase {
         ExprBase {
             op: tok,
             type_: p,
@@ -75,13 +76,25 @@ impl ExprBase {
     }
 }
 
+impl Clone for ExprBase {
+    fn clone(&self) -> Self {
+        ExprBase {
+            op: self.op.clone(),
+            type_: match &self.type_ {
+                Some(type_base) => Some(type_base.clone()),
+                None => None,
+            },
+        }
+    }
+}
+
 impl ExprAble for ExprBase {
-    fn gen(&self) -> *const dyn ExprAble where Self: Sized {
-        &(*self) as *const dyn ExprAble
+    fn gen(&self, _temp_count: &mut u8) -> Box<dyn ExprAble> {
+        Box::new(self.clone())
     }
 
-    fn reduce(&self) -> *const dyn ExprAble where Self: Sized {
-        &(*self) as *const dyn ExprAble
+    fn reduce(&self, _temp_count: &mut u8) -> Box<dyn ExprAble> {
+        Box::new(self.clone())
     }
 
     fn emit_jumps(&self, test: String, t: u32, f: u32) {
@@ -104,24 +117,170 @@ impl ExprAble for ExprBase {
     fn jumping(&self, t: u32, f: u32) {
         self.emit_jumps(self.to_string(), t, f);
     }
+
+    fn get_type(&self) -> &Option<TypeBase> {
+        &self.type_
+    }
 }
 
 #[allow(dead_code)]
-enum Logical {
-    Logical(LogicalBase),
-    And {
-        logical: LogicalBase,
-    },
-    Or {
-        logical: LogicalBase,
-    },
+enum Op {
+    Op(OpBase),
+    Arith(ArithBase),
 }
 
 #[allow(dead_code)]
-struct LogicalBase {
+struct Temp {
     expr_base: ExprBase,
-    expr1: Expr,
-    expr2: Expr,
+    number: u8,
+}
+
+#[allow(dead_code)]
+impl Temp {
+    fn new(p: TypeBase, temp_count: &mut u8) -> Temp {
+        *temp_count = *temp_count + 1;
+        let num = *temp_count;
+        Temp {
+            expr_base: ExprBase {
+                op: Token::Word(Word::Word(WordBase {
+                    lexeme: "t".to_string(),
+                    token: TokenBase {
+                        tag: Tag::Temp as u32,
+                    },
+                })),
+                type_: Some(p),
+            },
+            number: num,
+        }
+    }
+}
+
+/*
+impl ExprAble for Temp {
+}
+*/
+
+#[allow(dead_code)]
+struct OpBase {
+    expr_base: ExprBase,
+}
+
+impl OpBase {
+    #[allow(dead_code)]
+    pub fn new(tok: Token, p: Option<TypeBase>) -> OpBase {
+        OpBase {
+            expr_base: ExprBase::new(tok, p),
+        }
+    }
+}
+
+impl ExprAble for OpBase {
+    fn reduce(&self, temp_count: &mut u8) -> Box<dyn ExprAble> {
+        let x = self.gen(temp_count);
+        // TODO: implement Temp
+        x
+    }
+
+    // Inherited:
+
+    fn gen(&self, temp_count: &mut u8) -> Box<dyn ExprAble> {
+        self.expr_base.gen(temp_count)
+    }
+
+    fn emit_jumps(&self, test: String, t: u32, f: u32) {
+        self.expr_base.emit_jumps(test, t, f);
+    }
+
+    fn to_string(&self) -> String {
+        self.expr_base.to_string()
+    }
+
+    fn jumping(&self, t: u32, f: u32) {
+        self.expr_base.jumping(t, f);
+    }
+
+    fn get_type(&self) -> &Option<TypeBase> {
+        &self.expr_base.type_
+    }
+}
+
+#[allow(dead_code)]
+struct ArithBase {
+    op_base: OpBase,
+    expr1: Box<dyn ExprAble>,
+    expr2: Box<dyn ExprAble>,
+    line: u32,
+}
+
+impl ArithBase {
+    #[allow(dead_code)]
+    fn error(line: u32, s: &str) -> ! {
+        let node = Node::new(line);
+        node.error(s);
+    }
+
+    #[allow(dead_code)]
+    fn new(tok: Token, x1: Box<dyn ExprAble>, x2: Box<dyn ExprAble>, line: u32) -> ArithBase {
+        let mut ret = ArithBase {
+            op_base: OpBase::new(tok, None),
+            expr1: x1,
+            expr2: x2,
+            line: line,
+        };
+
+        let type1 = (*ret.expr1).get_type().as_ref().unwrap();
+        let type2 = (*ret.expr2).get_type().as_ref().unwrap();
+        match TypeBase::max(type1, type2) {
+            Some(type_base) => ret.op_base.expr_base.type_ = Some(type_base),
+            None => ArithBase::error(line, "type error"),
+        };
+        ret
+    }
+}
+
+impl ExprAble for ArithBase {
+    fn gen(&self, temp_count: &mut u8) -> Box<dyn ExprAble> {
+        Box::new(ArithBase {
+            op_base: OpBase {
+                expr_base: ExprBase {
+                    op: self.op_base.expr_base.op.clone(),
+                    type_: match &self.op_base.expr_base.type_ {
+                        Some(type_base) => Some(type_base.clone()),
+                        None => None,
+                    },
+                },
+            },
+            expr1: self.expr1.reduce(temp_count),
+            expr2: self.expr2.reduce(temp_count),
+            line: self.line,
+        })
+    }
+
+    fn to_string(&self) -> String {
+        format!("{} {} {}",
+            (*self.expr1).to_string(),
+            self.op_base.expr_base.op.to_string(),
+            (*self.expr2).to_string()
+        )
+    }
+
+    // Explicitly inherited:
+
+    fn reduce(&self, temp_count: &mut u8) -> Box<dyn ExprAble> {
+        self.op_base.reduce(temp_count)
+    }
+
+    fn jumping(&self, t: u32, f: u32) {
+        self.op_base.jumping(t, f);
+    }
+
+    fn emit_jumps(&self, test: String, t: u32, f: u32) {
+        self.op_base.emit_jumps(test, t, f);
+    }
+
+    fn get_type(&self) -> &Option<TypeBase> {
+        self.op_base.get_type()
+    }
 }
 
 // Statements:
