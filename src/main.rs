@@ -1,5 +1,6 @@
 mod lexer;
 mod ir;
+mod symbols;
 mod parser;
 
 fn main() {

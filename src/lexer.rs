@@ -69,6 +69,27 @@ impl Clone for WordBase {
     }
 }
 
+#[allow(dead_code)]
+impl PartialEq for WordBase {
+    fn eq(&self, other: &Self) -> bool {
+        if (*self).token.tag != (*other).token.tag {
+            false;
+        }
+        (*self).lexeme == (*other).lexeme
+    }
+}
+
+impl Eq for WordBase {}
+
+use std::hash::{Hash, Hasher};
+
+impl Hash for WordBase {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.token.tag.hash(state);
+        self.lexeme.hash(state);
+    }
+}
+
 #[inline]
 #[allow(dead_code)]
 fn word_and() -> WordBase {
@@ -239,6 +260,15 @@ impl Clone for TypeBase {
 pub enum Word {
     Word(WordBase),
     Type(TypeBase),
+}
+
+impl Clone for Word {
+    fn clone(&self) -> Self {
+        match &*self {
+            Word::Word(word) => Word::Word(word.clone()),
+            Word::Type(type_) => Word::Type(type_.clone()),
+        }
+    }
 }
 
 #[allow(dead_code)]

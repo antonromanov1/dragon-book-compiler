@@ -66,7 +66,8 @@ trait ExprAble {
 #[allow(dead_code)]
 struct ExprBase {
     op: Token,
-    type_: Option<TypeBase>,
+    type_: Option<TypeBase>, // TODO: understand do I really need Option<TypeBase> instead of
+                             // TypeBase
 }
 
 impl ExprBase {
@@ -185,6 +186,31 @@ impl ExprAble for Temp {
 
     fn get_type(&self) -> &Option<TypeBase> {
         &self.expr_base.type_
+    }
+}
+
+#[allow(dead_code)]
+pub struct IdBase {
+    expr_base: ExprBase,
+    offset: u32,
+}
+
+#[allow(dead_code)]
+impl IdBase {
+    pub fn new(id: WordBase, p: TypeBase, b: u32) -> IdBase {
+        IdBase {
+            expr_base: ExprBase::new(Token::Word(Word::Word(id)), Some(p)),
+            offset: b,
+        }
+    }
+}
+
+impl Clone for IdBase {
+    fn clone(&self) -> Self {
+        IdBase{
+            expr_base: self.expr_base.clone(),
+            offset: self.offset,
+        }
     }
 }
 
