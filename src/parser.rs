@@ -1,13 +1,21 @@
 use std::rc::Rc;
 use std::cell::RefCell;
 
-use crate::lexer::*;
 use crate::ir::*;
+use crate::lexer::*;
+use crate::symbols::*;
 
 #[allow(dead_code)]
 pub struct Parser {
+    // lex - lexical analyzer for this parser
+    // look - lookahead token
+    // top - current or top symbol table
+    // enclosing - pointer to enclosing loop
+    // temp_count - number of temporary variables
+
     lex: Lexer,
     look: Token,
+    top: Option<Box<Env>>,
     enclosing: Option<Box<dyn StmtAble>>,
     temp_count: Rc<RefCell<u8>>,
 }
@@ -24,6 +32,7 @@ impl Parser {
             look: Token::Token(TokenBase {
                 tag: 0,
             }),
+            top: None,
             enclosing: None,
             temp_count: Rc::new(RefCell::new(0)),
         };
@@ -58,4 +67,9 @@ impl Parser {
             None => panic!("Unexpected event"),
         };
     }
+
+    /*
+    fn block() -> Option<Box<dyn StmtAble>> {
+    }
+     */
 }

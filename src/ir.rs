@@ -190,33 +190,61 @@ impl ExprAble for Temp {
 }
 
 #[allow(dead_code)]
-pub struct IdBase {
+pub struct Id {
     expr_base: ExprBase,
     offset: u32,
 }
 
 #[allow(dead_code)]
-impl IdBase {
-    pub fn new(id: WordBase, p: TypeBase, b: u32) -> IdBase {
-        IdBase {
+impl Id {
+    pub fn new(id: WordBase, p: TypeBase, b: u32) -> Id {
+        Id {
             expr_base: ExprBase::new(Token::Word(Word::Word(id)), Some(p)),
             offset: b,
         }
     }
 }
 
-impl Clone for IdBase {
+impl Clone for Id {
     fn clone(&self) -> Self {
-        IdBase{
+        Id {
             expr_base: self.expr_base.clone(),
             offset: self.offset,
         }
     }
 }
 
+impl ExprAble for Id {
+    // All explicitly inherited
+
+    fn gen(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
+        self.expr_base.gen(temp_count)
+    }
+
+    fn reduce(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
+        self.expr_base.reduce(temp_count)
+    }
+
+    fn jumping(&self, t: u32, f: u32) {
+        self.expr_base.jumping(t, f);
+    }
+
+    fn emit_jumps(&self, test: String, t: u32, f: u32) {
+        self.expr_base.emit_jumps(test, t, f);
+    }
+
+    fn to_string(&self) -> String {
+        self.expr_base.to_string()
+    }
+
+    fn get_type(&self) -> &Option<TypeBase> {
+        self.expr_base.get_type()
+    }
+}
+
 #[allow(dead_code)]
 struct OpBase {
-    expr_base: ExprBase,
+    expr_base: ExprBase, // TODO: refactor
 }
 
 impl OpBase {
@@ -321,6 +349,54 @@ impl ExprAble for ArithBase {
 
     // Explicitly inherited:
 
+    fn reduce(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
+        self.op_base.reduce(temp_count)
+    }
+
+    fn jumping(&self, t: u32, f: u32) {
+        self.op_base.jumping(t, f);
+    }
+
+    fn emit_jumps(&self, test: String, t: u32, f: u32) {
+        self.op_base.emit_jumps(test, t, f);
+    }
+
+    fn get_type(&self) -> &Option<TypeBase> {
+        self.op_base.get_type()
+    }
+}
+
+#[allow(dead_code)]
+struct Unary {
+    op_base: OpBase,
+    expr: Box<dyn ExprAble>,
+}
+
+impl Unary {
+    #[allow(dead_code)]
+    pub fn new(tok: Token, x: Box<dyn ExprAble>) -> Unary {
+        let type_ = TypeBase::max(&type_int(), (*x).get_type().as_ref().unwrap());
+        if type_ == None {
+            panic!("type error"); // TODO: add output of line of source code
+        }
+
+        Unary {
+            op_base: OpBase::new(tok, type_),
+            expr: x,
+        }
+    }
+}
+
+impl ExprAble for Unary {
+    fn gen(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
+        Box::new(Unary::new(self.op_base.expr_base.op.clone(), (*self.expr).reduce(temp_count)))
+    }
+
+    fn to_string(&self) -> String {
+        self.op_base.expr_base.op.to_string().clone() + &(*self.expr).to_string()
+    }
+
+    // Explicitly inherited
     fn reduce(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
         self.op_base.reduce(temp_count)
     }

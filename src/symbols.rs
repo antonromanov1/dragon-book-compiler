@@ -4,8 +4,8 @@ use crate::lexer::*;
 use crate::ir::*;
 
 #[allow(dead_code)]
-struct Env {
-    table: HashMap<WordBase, IdBase>,
+pub struct Env {
+    table: HashMap<WordBase, Id>,
     prev: Option<Box<Env>>,
 }
 
@@ -19,11 +19,11 @@ impl Env {
     }
 
     #[allow(dead_code)]
-    pub fn put(&mut self, w: WordBase, i: IdBase) {
+    pub fn put(&mut self, w: WordBase, i: Id) {
         self.table.insert(w, i);
     }
 
-    pub fn get(&self, w: &WordBase) -> Option<IdBase> {
+    pub fn get(&self, w: &WordBase) -> Option<Id> {
         match self.table.get(w) {
             Some(id) => {
                 return Some(id.clone());
