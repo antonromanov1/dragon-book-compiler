@@ -33,13 +33,13 @@ fn emit_label(i: u32) {
     print!("L{}:", i);
 }
 
-#[allow(dead_code)]
 fn emit(s: String) {
     println!("\t{}", s);
 }
 
 // Expressions:
 
+/*
 #[allow(dead_code)]
 enum Expr {
     Constant {
@@ -52,6 +52,7 @@ enum Expr {
     },
     Op(Op),
 }
+*/
 
 trait ExprAble {
     fn gen(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble>;
@@ -411,6 +412,79 @@ impl ExprAble for Unary {
 
     fn get_type(&self) -> &Option<TypeBase> {
         self.op_base.get_type()
+    }
+}
+
+#[allow(dead_code)]
+pub struct Constant {
+    expr_base: ExprBase,
+}
+
+impl Constant {
+    #[allow(dead_code)]
+    pub fn new(tok: Token, p: TypeBase) -> Constant {
+        Constant {
+            expr_base: ExprBase::new(tok, Some(p)),
+        }
+    }
+}
+
+#[inline]
+#[allow(dead_code)]
+pub fn constant_true() -> Constant {
+    Constant {
+        expr_base: ExprBase::new(Token::Word(Word::Word(word_true())), Some(type_bool())),
+    }
+}
+
+#[inline]
+#[allow(dead_code)]
+pub fn constant_false() -> Constant {
+    Constant {
+        expr_base: ExprBase::new(Token::Word(Word::Word(word_false())), Some(type_bool())),
+    }
+}
+
+impl ExprAble for Constant {
+    fn jumping(&self, t: u32, f: u32) {
+        match &self.expr_base.op {
+            Token::Word(word) => {
+                match word {
+                    Word::Word(base) => {
+                        if (base.lexeme == "true".to_string()) && (t != 0) {
+                            emit(format!("goto L{}", t));
+                        }
+                        else if (base.lexeme == "false".to_string()) && (f != 0) {
+                            emit(format!("goto L{}", f));
+                        }
+                    }
+                    _ => {}
+                }
+            },
+            _ => {}
+        }
+    }
+
+    // Explicitly inherited:
+
+    fn gen(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
+        self.expr_base.gen(temp_count)
+    }
+
+    fn reduce(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
+        self.expr_base.reduce(temp_count)
+    }
+
+    fn emit_jumps(&self, test: String, t: u32, f: u32) {
+        self.expr_base.emit_jumps(test, t, f);
+    }
+
+    fn to_string(&self) -> String {
+        self.expr_base.to_string()
+    }
+
+    fn get_type(&self) -> &Option<TypeBase> {
+        self.expr_base.get_type()
     }
 }
 

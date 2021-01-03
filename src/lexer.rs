@@ -12,7 +12,7 @@ pub enum Tag {
     // Do,
     Else,
     Eq_,
-    // False,
+    False,
     // Ge,
     Id,
     If,
@@ -24,7 +24,7 @@ pub enum Tag {
     Or,
     Real,
     Temp,
-    // True,
+    True,
     // While,
 }
 
@@ -120,6 +120,28 @@ fn word_eq() -> WordBase {
             tag: Tag::Eq_ as u32,
         },
         lexeme: "==".to_string(),
+    }
+}
+
+#[inline]
+#[allow(dead_code)]
+pub fn word_true() -> WordBase {
+    WordBase {
+        token: TokenBase {
+            tag: Tag::True as u32,
+        },
+        lexeme: "true".to_string(),
+    }
+}
+
+#[inline]
+#[allow(dead_code)]
+pub fn word_false() -> WordBase {
+    WordBase {
+        token: TokenBase {
+            tag: Tag::False as u32,
+        },
+        lexeme: "false".to_string(),
     }
 }
 

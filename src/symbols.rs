@@ -3,14 +3,13 @@ use std::collections::HashMap;
 use crate::lexer::*;
 use crate::ir::*;
 
-#[allow(dead_code)]
 pub struct Env {
     table: HashMap<WordBase, Id>,
     prev: Option<Box<Env>>,
 }
 
-#[allow(dead_code)]
 impl Env {
+    #[allow(dead_code)]
     pub fn new(n: Option<Box<Env>>) -> Env {
         Env {
             table: HashMap::new(),
@@ -23,6 +22,7 @@ impl Env {
         self.table.insert(w, i);
     }
 
+    #[allow(dead_code)]
     pub fn get(&self, w: &WordBase) -> Option<Id> {
         match self.table.get(w) {
             Some(id) => {
@@ -34,6 +34,7 @@ impl Env {
         let mut e = &(self.prev);
         match e {
             Some(ptr) => {
+
                 loop {
                     match (*ptr).table.get(w) {
                         Some(id) => {
@@ -48,6 +49,7 @@ impl Env {
                         },
                     };
                 }
+
             },
             None => {
                 return None;
