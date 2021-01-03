@@ -8,8 +8,8 @@ use std::collections::HashMap;
 pub enum Tag {
     And = 256,
     Basic, // primitive types such as char, bool, int, float and array
-    // Break,
-    // Do,
+    Break,
+    Do,
     Else,
     Eq_,
     False,
@@ -25,7 +25,7 @@ pub enum Tag {
     Real,
     Temp,
     True,
-    // While,
+    While,
 }
 
 #[allow(dead_code)]
@@ -91,58 +91,28 @@ impl Hash for WordBase {
 }
 
 #[inline]
-#[allow(dead_code)]
 fn word_and() -> WordBase {
-    WordBase {
-        token: TokenBase {
-            tag: Tag::And as u32,
-        },
-        lexeme: "&&".to_string(),
-    }
+    WordBase::new("&&".to_string(), Tag::And as u32)
 }
 
 #[inline]
-#[allow(dead_code)]
 fn word_or() -> WordBase {
-    WordBase {
-        token: TokenBase {
-            tag: Tag::Or as u32,
-        },
-        lexeme: "||".to_string(),
-    }
+    WordBase::new("||".to_string(), Tag::Or as u32)
 }
 
 #[inline]
-#[allow(dead_code)]
 fn word_eq() -> WordBase {
-    WordBase {
-        token: TokenBase {
-            tag: Tag::Eq_ as u32,
-        },
-        lexeme: "==".to_string(),
-    }
+    WordBase::new("==".to_string(), Tag::Eq_ as u32)
 }
 
 #[inline]
-#[allow(dead_code)]
 pub fn word_true() -> WordBase {
-    WordBase {
-        token: TokenBase {
-            tag: Tag::True as u32,
-        },
-        lexeme: "true".to_string(),
-    }
+    WordBase::new("true".to_string(), Tag::True as u32)
 }
 
 #[inline]
-#[allow(dead_code)]
 pub fn word_false() -> WordBase {
-    WordBase {
-        token: TokenBase {
-            tag: Tag::False as u32,
-        },
-        lexeme: "false".to_string(),
-    }
+    WordBase::new("false".to_string(), Tag::False as u32)
 }
 
 #[allow(dead_code)]
@@ -221,7 +191,6 @@ pub fn type_char() -> TypeBase {
 }
 
 #[inline]
-#[allow(dead_code)]
 pub fn type_bool() -> TypeBase {
     TypeBase {
         word: WordBase::new("bool".to_string(), Tag::Basic as u32),
@@ -390,13 +359,8 @@ pub struct Lexer {
 
 #[allow(dead_code)]
 impl Lexer {
-    fn reserve(&mut self, w: Word) {
-        match w {
-            Word::Word(x) => self.words.insert(x.lexeme.clone(),
-                                                    Word::Word(x)),
-            Word::Type(y) => self.words.insert(y.word.lexeme.clone(),
-                                                    Word::Type(y)),
-        };
+    fn reserve(&mut self, w: WordBase) {
+        self.words.insert(w.lexeme.clone(), Word::Word(w));
     }
 
     pub fn new(file_name: &str) -> Lexer {
@@ -410,18 +374,19 @@ impl Lexer {
             words: HashMap::new(),
         };
 
-        lex.reserve(Word::Word(WordBase {
-            lexeme: "if".to_string(),
-            token: TokenBase {
-                tag: Tag::If as u32,
-            },
-        }));
-        lex.reserve(Word::Word(WordBase {
-            lexeme: "else".to_string(),
-            token: TokenBase {
-                tag: Tag::Else as u32,
-            },
-        }));
+        lex.reserve(WordBase::new("if".to_string(),    Tag::If as u32));
+        lex.reserve(WordBase::new("else".to_string(),  Tag::Else as u32));
+        lex.reserve(WordBase::new("while".to_string(), Tag::While as u32));
+        lex.reserve(WordBase::new("do".to_string(),    Tag::Do as u32));
+        lex.reserve(WordBase::new("break".to_string(), Tag::Break as u32));
+
+        lex.reserve(word_true());
+        lex.reserve(word_false());
+
+        lex.reserve(type_int().word);
+        lex.reserve(type_char().word);
+        lex.reserve(type_bool().word);
+        lex.reserve(type_float().word);
 
         lex
     }
