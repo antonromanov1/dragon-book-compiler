@@ -23,12 +23,6 @@ impl Node {
 }
 
 #[allow(dead_code)]
-fn new_label(labels: &mut Box<u32>) -> u32 {
-    *(*labels) = *(*labels) + 1;
-    *(*labels)
-}
-
-#[allow(dead_code)]
 fn emit_label(i: u32) {
     print!("L{}:", i);
 }
@@ -55,8 +49,8 @@ enum Expr {
 */
 
 pub trait ExprAble {
-    fn gen(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble>;
-    fn reduce(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble>;
+    fn gen(&self) -> Box<dyn ExprAble>;
+    fn reduce(&self) -> Box<dyn ExprAble>;
     fn jumping(&self, t: u32, f: u32);
     fn emit_jumps(&self, test: String, t: u32, f: u32);
     fn to_string(&self) -> String;
@@ -92,11 +86,11 @@ impl Clone for ExprBase {
 }
 
 impl ExprAble for ExprBase {
-    fn gen(&self, _temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
+    fn gen(&self) -> Box<dyn ExprAble> {
         Box::new(self.clone())
     }
 
-    fn reduce(&self, _temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
+    fn reduce(&self) -> Box<dyn ExprAble> {
         Box::new(self.clone())
     }
 
@@ -124,12 +118,6 @@ impl ExprAble for ExprBase {
     fn get_type(&self) -> &Option<TypeBase> {
         &self.type_
     }
-}
-
-#[allow(dead_code)]
-enum Op {
-    Op(OpBase),
-    Arith(ArithBase),
 }
 
 #[allow(dead_code)]
@@ -167,12 +155,12 @@ impl ExprAble for Temp {
 
     // Explicitly inherited:
 
-    fn gen(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
-        self.expr_base.gen(temp_count)
+    fn gen(&self) -> Box<dyn ExprAble> {
+        self.expr_base.gen()
     }
 
-    fn reduce(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
-        self.expr_base.reduce(temp_count)
+    fn reduce(&self) -> Box<dyn ExprAble> {
+        self.expr_base.reduce()
     }
 
     fn jumping(&self, t: u32, f: u32) {
@@ -215,12 +203,12 @@ impl Clone for Id {
 impl ExprAble for Id {
     // All explicitly inherited
 
-    fn gen(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
-        self.expr_base.gen(temp_count)
+    fn gen(&self) -> Box<dyn ExprAble> {
+        self.expr_base.gen()
     }
 
-    fn reduce(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
-        self.expr_base.reduce(temp_count)
+    fn reduce(&self) -> Box<dyn ExprAble> {
+        self.expr_base.reduce()
     }
 
     fn jumping(&self, t: u32, f: u32) {
@@ -243,29 +231,32 @@ impl ExprAble for Id {
 #[allow(dead_code)]
 struct OpBase {
     expr_base: ExprBase, // TODO: refactor
+    pub temp_count: Rc<RefCell<u8>>,
 }
 
 impl OpBase {
     #[allow(dead_code)]
-    pub fn new(tok: Token, p: Option<TypeBase>) -> OpBase {
+    pub fn new(tok: Token, p: Option<TypeBase>, count: Rc<RefCell<u8>>) -> OpBase {
         OpBase {
             expr_base: ExprBase::new(tok, p),
+            temp_count: count,
         }
     }
 }
 
 impl ExprAble for OpBase {
-    fn reduce(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
-        let x = self.gen(temp_count.clone());
-        let t = Box::new(Temp::new((*self.get_type()).as_ref().unwrap().clone(), temp_count));
+    fn reduce(&self) -> Box<dyn ExprAble> {
+        let x = self.gen();
+        let t = Box::new(
+                  Temp::new((*self.get_type()).as_ref().unwrap().clone(), self.temp_count.clone()));
         emit(format!("{} = {}", t.to_string(), x.to_string()));
         t
     }
 
     // Inherited:
 
-    fn gen(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
-        self.expr_base.gen(temp_count)
+    fn gen(&self) -> Box<dyn ExprAble> {
+        self.expr_base.gen()
     }
 
     fn emit_jumps(&self, test: String, t: u32, f: u32) {
@@ -285,23 +276,23 @@ impl ExprAble for OpBase {
     }
 }
 
-pub struct ArithBase {
+pub struct Arith {
     op_base: OpBase,
     expr1: Box<dyn ExprAble>,
     expr2: Box<dyn ExprAble>,
     line: u32,
 }
 
-impl ArithBase {
-    #[allow(dead_code)]
+impl Arith {
     fn error(line: u32, s: &str) -> ! {
         let node = Node::new(line);
         node.error(s);
     }
 
-    pub fn new(tok: Token, x1: Box<dyn ExprAble>, x2: Box<dyn ExprAble>, line: u32) -> ArithBase {
-        let mut ret = ArithBase {
-            op_base: OpBase::new(tok, None),
+    pub fn new(tok: Token, x1: Box<dyn ExprAble>, x2: Box<dyn ExprAble>, line: u32,
+               count: Rc<RefCell<u8>>) -> Arith {
+        let mut ret = Arith {
+            op_base: OpBase::new(tok, None, count),
             expr1: x1,
             expr2: x2,
             line: line,
@@ -311,15 +302,16 @@ impl ArithBase {
         let type2 = (*ret.expr2).get_type().as_ref().unwrap();
         match TypeBase::max(type1, type2) {
             Some(type_base) => ret.op_base.expr_base.type_ = Some(type_base),
-            None => ArithBase::error(line, "type error"),
+            None => Arith::error(line, "type error"),
         };
         ret
     }
 }
 
-impl ExprAble for ArithBase {
-    fn gen(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
-        Box::new(ArithBase {
+impl ExprAble for Arith {
+    fn gen(&self) -> Box<dyn ExprAble> {
+        /*
+        Box::new(Arith {
             op_base: OpBase {
                 expr_base: ExprBase {
                     op: self.op_base.expr_base.op.clone(),
@@ -329,10 +321,13 @@ impl ExprAble for ArithBase {
                     },
                 },
             },
-            expr1: self.expr1.reduce(temp_count.clone()),
-            expr2: self.expr2.reduce(temp_count),
+            expr1: self.expr1.reduce(),
+            expr2: self.expr2.reduce(),
             line: self.line,
         })
+        */
+        Box::new(Arith::new(self.op_base.expr_base.op.clone(), self.expr1.reduce(),
+                            self.expr2.reduce(), self.line, self.op_base.temp_count.clone()))
     }
 
     fn to_string(&self) -> String {
@@ -345,8 +340,8 @@ impl ExprAble for ArithBase {
 
     // Explicitly inherited:
 
-    fn reduce(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
-        self.op_base.reduce(temp_count)
+    fn reduce(&self) -> Box<dyn ExprAble> {
+        self.op_base.reduce()
     }
 
     fn jumping(&self, t: u32, f: u32) {
@@ -368,22 +363,24 @@ pub struct Unary {
 }
 
 impl Unary {
-    pub fn new(tok: Token, x: Box<dyn ExprAble>) -> Unary {
+    pub fn new(tok: Token, x: Box<dyn ExprAble>, count: Rc<RefCell<u8>>) -> Unary {
         let type_ = TypeBase::max(&type_int(), (*x).get_type().as_ref().unwrap());
         if type_ == None {
             panic!("type error"); // TODO: add output of line of source code
         }
 
         Unary {
-            op_base: OpBase::new(tok, type_),
+            op_base: OpBase::new(tok, type_, count),
             expr: x,
         }
     }
 }
 
 impl ExprAble for Unary {
-    fn gen(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
-        Box::new(Unary::new(self.op_base.expr_base.op.clone(), (*self.expr).reduce(temp_count)))
+    fn gen(&self) -> Box<dyn ExprAble> {
+        Box::new(
+            Unary::new(self.op_base.expr_base.op.clone(), (*self.expr).reduce(),
+                       self.op_base.temp_count.clone()))
     }
 
     fn to_string(&self) -> String {
@@ -391,8 +388,8 @@ impl ExprAble for Unary {
     }
 
     // Explicitly inherited
-    fn reduce(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
-        self.op_base.reduce(temp_count)
+    fn reduce(&self) -> Box<dyn ExprAble> {
+        self.op_base.reduce()
     }
 
     fn jumping(&self, t: u32, f: u32) {
@@ -456,12 +453,12 @@ impl ExprAble for Constant {
 
     // Explicitly inherited:
 
-    fn gen(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
-        self.expr_base.gen(temp_count)
+    fn gen(&self) -> Box<dyn ExprAble> {
+        self.expr_base.gen()
     }
 
-    fn reduce(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
-        self.expr_base.reduce(temp_count)
+    fn reduce(&self) -> Box<dyn ExprAble> {
+        self.expr_base.reduce()
     }
 
     fn emit_jumps(&self, test: String, t: u32, f: u32) {
@@ -476,6 +473,54 @@ impl ExprAble for Constant {
         self.expr_base.get_type()
     }
 }
+
+pub fn new_label(labels: Rc<RefCell<u32>>) {
+    *labels.borrow_mut() += 1;
+}
+
+/*
+pub trait LogicalAble: ExprAble {
+    fn get_temp_count() -> Rc<RefCell<u8>>;
+
+    fn gen(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
+        Temp
+    }
+
+    fn check(p1: TypeBase, p2: TypeBase) -> Option<TypeBase> {
+        if p1 == type_bool() && p2 == type_bool() {
+            Some(type_bool())
+        }
+        else {
+            None
+        }
+    }
+}
+
+pub struct LogicalBase {
+    expr_base: ExprBase,
+    pub expr1: Box<dyn ExprAble>,
+    pub expr2: Box<dyn ExprAble>,
+    temp_count: Rc<RefCell<u8>>,
+}
+*/
+
+/*
+impl LogicalBase {
+    pub fn new(tok: Token, x1: Box<dyn ExprAble>, x2: Box<dyn ExprAble>) -> LogicalBase {
+        let type_: Option<TypeBase> = LogicalAble::check((*x1).get_type().unwrap(), (*x2).get_type().unwrap());
+        match type_ {
+            None => panic!("type error"), // TODO: should print line
+            Some(t) => {
+                LogicalBase {
+                    expr_base: ExprBase::new(tok, Some(t)),
+                    expr1: x1,
+                    expr2: x2,
+                }
+            }
+        }
+    }
+}
+*/
 
 // Statements:
 

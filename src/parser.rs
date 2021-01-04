@@ -12,12 +12,14 @@ pub struct Parser {
     // top - current or top symbol table
     // enclosing - pointer to enclosing loop
     // temp_count - number of temporary variables
+    // labels - number of labels
 
     lex: Lexer,
     look: Token,
     top: Option<Box<Env>>,
     enclosing: Option<Box<dyn StmtAble>>,
     temp_count: Rc<RefCell<u8>>,
+    labels: Rc<RefCell<u32>>,
 }
 
 #[allow(dead_code)]
@@ -35,6 +37,7 @@ impl Parser {
             top: None,
             enclosing: None,
             temp_count: Rc::new(RefCell::new(0)),
+            labels: Rc::new(RefCell::new(0)),
         };
         p.move_();
         p
@@ -79,7 +82,8 @@ impl Parser {
 
             let tok = self.look.clone();
             self.move_();
-            x = Box::new(ArithBase::new(tok, x, self.unary(), self.lex.line_num));
+            x = Box::new(Arith::new(tok, x, self.unary(), self.lex.line_num,
+                                    self.temp_count.clone()));
         }
         x
     }
@@ -87,7 +91,8 @@ impl Parser {
     fn unary(&mut self) -> Box<dyn ExprAble> {
         if self.look.get_tag().unwrap() == '-' as u32 {
             self.move_();
-            return Box::new(Unary::new(Token::Word(Word::Word(word_minus())), self.unary()));
+            return Box::new(Unary::new(Token::Word(Word::Word(word_minus())), self.unary(),
+                                       self.temp_count.clone()));
         }
         else {
             return self.factor();
