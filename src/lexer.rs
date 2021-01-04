@@ -18,7 +18,7 @@ pub enum Tag {
     If,
     // Index,
     // Le,
-    // Minus,
+    Minus,
     // Ne,
     Num,
     Or,
@@ -113,6 +113,11 @@ pub fn word_true() -> WordBase {
 #[inline]
 pub fn word_false() -> WordBase {
     WordBase::new("false".to_string(), Tag::False as u32)
+}
+
+#[inline]
+pub fn word_minus() -> WordBase {
+    WordBase::new("minus".to_string(), Tag::Minus as u32)
 }
 
 #[allow(dead_code)]

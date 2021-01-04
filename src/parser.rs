@@ -72,6 +72,28 @@ impl Parser {
     }
      */
 
+    fn term(&mut self) -> Box<dyn ExprAble> {
+        let mut x = self.unary();
+        while self.look.get_tag().unwrap() == '*' as u32 ||
+              self.look.get_tag().unwrap() == '/' as u32 {
+
+            let tok = self.look.clone();
+            self.move_();
+            x = Box::new(ArithBase::new(tok, x, self.unary(), self.lex.line_num));
+        }
+        x
+    }
+
+    fn unary(&mut self) -> Box<dyn ExprAble> {
+        if self.look.get_tag().unwrap() == '-' as u32 {
+            self.move_();
+            return Box::new(Unary::new(Token::Word(Word::Word(word_minus())), self.unary()));
+        }
+        else {
+            return self.factor();
+        }
+    }
+
     fn factor(&mut self) -> Box<dyn ExprAble> {
         match self.look.get_tag() {
             Some(tag) => {

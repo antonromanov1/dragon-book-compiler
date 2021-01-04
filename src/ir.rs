@@ -285,8 +285,7 @@ impl ExprAble for OpBase {
     }
 }
 
-#[allow(dead_code)]
-struct ArithBase {
+pub struct ArithBase {
     op_base: OpBase,
     expr1: Box<dyn ExprAble>,
     expr2: Box<dyn ExprAble>,
@@ -300,8 +299,7 @@ impl ArithBase {
         node.error(s);
     }
 
-    #[allow(dead_code)]
-    fn new(tok: Token, x1: Box<dyn ExprAble>, x2: Box<dyn ExprAble>, line: u32) -> ArithBase {
+    pub fn new(tok: Token, x1: Box<dyn ExprAble>, x2: Box<dyn ExprAble>, line: u32) -> ArithBase {
         let mut ret = ArithBase {
             op_base: OpBase::new(tok, None),
             expr1: x1,
@@ -364,14 +362,12 @@ impl ExprAble for ArithBase {
     }
 }
 
-#[allow(dead_code)]
-struct Unary {
+pub struct Unary {
     op_base: OpBase,
     expr: Box<dyn ExprAble>,
 }
 
 impl Unary {
-    #[allow(dead_code)]
     pub fn new(tok: Token, x: Box<dyn ExprAble>) -> Unary {
         let type_ = TypeBase::max(&type_int(), (*x).get_type().as_ref().unwrap());
         if type_ == None {
