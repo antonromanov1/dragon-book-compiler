@@ -54,7 +54,7 @@ enum Expr {
 }
 */
 
-trait ExprAble {
+pub trait ExprAble {
     fn gen(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble>;
     fn reduce(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble>;
     fn jumping(&self, t: u32, f: u32);
@@ -64,16 +64,14 @@ trait ExprAble {
     fn get_type(&self) -> &Option<TypeBase>;
 }
 
-#[allow(dead_code)]
-struct ExprBase {
+pub struct ExprBase {
     op: Token,
     type_: Option<TypeBase>, // TODO: understand do I really need Option<TypeBase> instead of
                              // TypeBase
 }
 
 impl ExprBase {
-    #[allow(dead_code)]
-    fn new(tok: Token, p: Option<TypeBase>) -> ExprBase {
+    pub fn new(tok: Token, p: Option<TypeBase>) -> ExprBase {
         ExprBase {
             op: tok,
             type_: p,
@@ -190,14 +188,13 @@ impl ExprAble for Temp {
     }
 }
 
-#[allow(dead_code)]
 pub struct Id {
     expr_base: ExprBase,
     offset: u32,
 }
 
-#[allow(dead_code)]
 impl Id {
+    #[allow(dead_code)]
     pub fn new(id: WordBase, p: TypeBase, b: u32) -> Id {
         Id {
             expr_base: ExprBase::new(Token::Word(Word::Word(id)), Some(p)),
@@ -415,13 +412,11 @@ impl ExprAble for Unary {
     }
 }
 
-#[allow(dead_code)]
 pub struct Constant {
     expr_base: ExprBase,
 }
 
 impl Constant {
-    #[allow(dead_code)]
     pub fn new(tok: Token, p: TypeBase) -> Constant {
         Constant {
             expr_base: ExprBase::new(tok, Some(p)),
@@ -430,7 +425,6 @@ impl Constant {
 }
 
 #[inline]
-#[allow(dead_code)]
 pub fn constant_true() -> Constant {
     Constant {
         expr_base: ExprBase::new(Token::Word(Word::Word(word_true())), Some(type_bool())),
@@ -438,7 +432,6 @@ pub fn constant_true() -> Constant {
 }
 
 #[inline]
-#[allow(dead_code)]
 pub fn constant_false() -> Constant {
     Constant {
         expr_base: ExprBase::new(Token::Word(Word::Word(word_false())), Some(type_bool())),
@@ -496,7 +489,7 @@ pub trait StmtAble {
 }
 
 #[allow(dead_code)]
-struct Break {
+pub struct Break {
     after: u32,
     stmt: Box<dyn StmtAble>,
 }

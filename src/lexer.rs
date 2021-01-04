@@ -271,7 +271,6 @@ pub enum Token {
     Eof,
 }
 
-#[allow(dead_code)]
 impl Token {
     pub fn get_tag(&self) -> Option<u32> {
         match &*self {
@@ -284,7 +283,7 @@ impl Token {
             } // TODO: find out why comma is not here
             Token::Num(c) => Some(c.token.tag),
             Token::Real(d) => Some(d.token.tag),
-            _ => None
+            Token::Eof => None
         }
     }
 

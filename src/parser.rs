@@ -53,18 +53,17 @@ impl Parser {
 
     fn match_(&mut self, t: u32) {
         match self.look.get_tag() {
-            Some(a) => {
-                if a == t {
+            Some(tag) => {
+                if tag == t {
                     self.move_();
                 }
                 else {
-                    // A temporary decision, tag is 4 bytes, bad cast
-                    // TODO
-                    self.expected(&format!("{}", (a as u8) as char),
+                    // TODO: change, it is a temporary decision, tag is 4 bytes, bad cast
+                    self.expected(&format!("{}", (tag as u8) as char),
                                   &format!("{}", (t as u8) as char));
                 }
             },
-            None => panic!("Unexpected event"),
+            None => panic!("End of file reached"),
         };
     }
 
@@ -72,4 +71,71 @@ impl Parser {
     fn block() -> Option<Box<dyn StmtAble>> {
     }
      */
+
+    fn factor(&mut self) -> Box<dyn ExprAble> {
+        match self.look.get_tag() {
+            Some(tag) => {
+                /*
+                if tag == '(' as u32 {
+                    self.move_();
+                    let x = self.bool_();
+                    self.match_(')');
+                    return x;
+                }
+                else if tag == Tag::Num as u32 {
+                ...
+                }
+                */
+
+                if tag == Tag::Num as u32 {
+                    let x = Box::new(Constant::new(self.look.clone(), type_int()));
+                    self.move_();
+                    return x;
+                }
+                else if tag == Tag::Real as u32 {
+                    let x = Box::new(Constant::new(self.look.clone(), type_float()));
+                    self.move_();
+                    return x;
+                }
+                else if tag == Tag::True as u32 {
+                    let x = Box::new(constant_true());
+                    self.move_();
+                    return x;
+                }
+                else if tag == Tag::False as u32 {
+                    let x = Box::new(constant_false());
+                    self.move_();
+                    return x;
+                }
+                else if tag == Tag::Id as u32 {
+                    let s = self.look.to_string();
+                    #[allow(unused_assignments)]
+                    let mut id: Option<Id> = None;
+
+                    match &self.look {
+                        Token::Word(word) => {
+                            match &word {
+                                Word::Word(w) => {
+                                    id = (*self.top.as_ref().unwrap()).get(&w);
+                                },
+                                _ => panic!("Unreachable"),
+                            }
+                        },
+                        _ => panic!("Unreachable"),
+                    }
+
+                    match id {
+                        None => self.error(&format!("{} undeclared", s)),
+                        _ => {}
+                    }
+                    self.move_();
+                    return Box::new(id.unwrap());
+                }
+                else {
+                    self.error("syntax error");
+                }
+            },
+            None => panic!("End of file reached"),
+        }
+    }
 }
