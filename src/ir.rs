@@ -33,21 +33,6 @@ fn emit(s: String) {
 
 // Expressions:
 
-/*
-#[allow(dead_code)]
-enum Expr {
-    Constant {
-        expr: ExprBase,
-    },
-    Expr(ExprBase),
-    Id {
-        expr: ExprBase,
-        offset: u32,
-    },
-    Op(Op),
-}
-*/
-
 pub trait ExprAble {
     fn gen(&self) -> Box<dyn ExprAble>;
     fn reduce(&self) -> Box<dyn ExprAble>;
@@ -55,17 +40,16 @@ pub trait ExprAble {
     fn emit_jumps(&self, test: String, t: u32, f: u32);
     fn to_string(&self) -> String;
 
-    fn get_type(&self) -> &Option<TypeBase>;
+    fn get_type(&self) -> &TypeBase;
 }
 
 pub struct ExprBase {
     op: Token,
-    type_: Option<TypeBase>, // TODO: understand do I really need Option<TypeBase> instead of
-                             // TypeBase
+    type_: TypeBase,
 }
 
 impl ExprBase {
-    pub fn new(tok: Token, p: Option<TypeBase>) -> ExprBase {
+    pub fn new(tok: Token, p: TypeBase) -> ExprBase {
         ExprBase {
             op: tok,
             type_: p,
@@ -77,10 +61,7 @@ impl Clone for ExprBase {
     fn clone(&self) -> Self {
         ExprBase {
             op: self.op.clone(),
-            type_: match &self.type_ {
-                Some(type_base) => Some(type_base.clone()),
-                None => None,
-            },
+            type_: self.type_.clone(),
         }
     }
 }
@@ -115,7 +96,7 @@ impl ExprAble for ExprBase {
         self.emit_jumps(self.to_string(), t, f);
     }
 
-    fn get_type(&self) -> &Option<TypeBase> {
+    fn get_type(&self) -> &TypeBase {
         &self.type_
     }
 }
@@ -141,7 +122,7 @@ impl Temp {
                         tag: Tag::Temp as u32,
                     },
                 })),
-                type_: Some(p),
+                type_: p,
             },
             number: *temp_count.borrow(),
         }
@@ -171,8 +152,8 @@ impl ExprAble for Temp {
         self.expr_base.emit_jumps(test, t, f);
     }
 
-    fn get_type(&self) -> &Option<TypeBase> {
-        &self.expr_base.type_
+    fn get_type(&self) -> &TypeBase {
+        self.expr_base.get_type()
     }
 }
 
@@ -185,7 +166,7 @@ impl Id {
     #[allow(dead_code)]
     pub fn new(id: WordBase, p: TypeBase, b: u32) -> Id {
         Id {
-            expr_base: ExprBase::new(Token::Word(Word::Word(id)), Some(p)),
+            expr_base: ExprBase::new(Token::Word(Word::Word(id)), p),
             offset: b,
         }
     }
@@ -223,20 +204,18 @@ impl ExprAble for Id {
         self.expr_base.to_string()
     }
 
-    fn get_type(&self) -> &Option<TypeBase> {
+    fn get_type(&self) -> &TypeBase {
         self.expr_base.get_type()
     }
 }
 
-#[allow(dead_code)]
 struct OpBase {
     expr_base: ExprBase, // TODO: refactor
     pub temp_count: Rc<RefCell<u8>>,
 }
 
 impl OpBase {
-    #[allow(dead_code)]
-    pub fn new(tok: Token, p: Option<TypeBase>, count: Rc<RefCell<u8>>) -> OpBase {
+    pub fn new(tok: Token, p: TypeBase, count: Rc<RefCell<u8>>) -> OpBase {
         OpBase {
             expr_base: ExprBase::new(tok, p),
             temp_count: count,
@@ -248,7 +227,7 @@ impl ExprAble for OpBase {
     fn reduce(&self) -> Box<dyn ExprAble> {
         let x = self.gen();
         let t = Box::new(
-                  Temp::new((*self.get_type()).as_ref().unwrap().clone(), self.temp_count.clone()));
+                  Temp::new((*self.get_type()).clone(), self.temp_count.clone()));
         emit(format!("{} = {}", t.to_string(), x.to_string()));
         t
     }
@@ -271,8 +250,8 @@ impl ExprAble for OpBase {
         self.expr_base.jumping(t, f);
     }
 
-    fn get_type(&self) -> &Option<TypeBase> {
-        &self.expr_base.type_
+    fn get_type(&self) -> &TypeBase {
+        self.expr_base.get_type()
     }
 }
 
@@ -291,41 +270,32 @@ impl Arith {
 
     pub fn new(tok: Token, x1: Box<dyn ExprAble>, x2: Box<dyn ExprAble>, line: u32,
                count: Rc<RefCell<u8>>) -> Arith {
-        let mut ret = Arith {
+        /*let mut ret = Arith {
             op_base: OpBase::new(tok, None, count),
             expr1: x1,
             expr2: x2,
             line: line,
-        };
+        };*/
 
-        let type1 = (*ret.expr1).get_type().as_ref().unwrap();
-        let type2 = (*ret.expr2).get_type().as_ref().unwrap();
+        let type1 = (*x1).get_type();
+        let type2 = (*x2).get_type();
         match TypeBase::max(type1, type2) {
-            Some(type_base) => ret.op_base.expr_base.type_ = Some(type_base),
+            Some(type_base) => {
+                return Arith {
+                    op_base: OpBase::new(tok, type_base, count),
+                    expr1: x1,
+                    expr2: x2,
+                    line: line,
+                };
+            },
             None => Arith::error(line, "type error"),
         };
-        ret
+        // ret
     }
 }
 
 impl ExprAble for Arith {
     fn gen(&self) -> Box<dyn ExprAble> {
-        /*
-        Box::new(Arith {
-            op_base: OpBase {
-                expr_base: ExprBase {
-                    op: self.op_base.expr_base.op.clone(),
-                    type_: match &self.op_base.expr_base.type_ {
-                        Some(type_base) => Some(type_base.clone()),
-                        None => None,
-                    },
-                },
-            },
-            expr1: self.expr1.reduce(),
-            expr2: self.expr2.reduce(),
-            line: self.line,
-        })
-        */
         Box::new(Arith::new(self.op_base.expr_base.op.clone(), self.expr1.reduce(),
                             self.expr2.reduce(), self.line, self.op_base.temp_count.clone()))
     }
@@ -352,7 +322,7 @@ impl ExprAble for Arith {
         self.op_base.emit_jumps(test, t, f);
     }
 
-    fn get_type(&self) -> &Option<TypeBase> {
+    fn get_type(&self) -> &TypeBase {
         self.op_base.get_type()
     }
 }
@@ -364,13 +334,13 @@ pub struct Unary {
 
 impl Unary {
     pub fn new(tok: Token, x: Box<dyn ExprAble>, count: Rc<RefCell<u8>>) -> Unary {
-        let type_ = TypeBase::max(&type_int(), (*x).get_type().as_ref().unwrap());
+        let type_ = TypeBase::max(&type_int(), (*x).get_type());
         if type_ == None {
             panic!("type error"); // TODO: add output of line of source code
         }
 
         Unary {
-            op_base: OpBase::new(tok, type_, count),
+            op_base: OpBase::new(tok, type_.unwrap(), count),
             expr: x,
         }
     }
@@ -400,7 +370,7 @@ impl ExprAble for Unary {
         self.op_base.emit_jumps(test, t, f);
     }
 
-    fn get_type(&self) -> &Option<TypeBase> {
+    fn get_type(&self) -> &TypeBase {
         self.op_base.get_type()
     }
 }
@@ -412,7 +382,7 @@ pub struct Constant {
 impl Constant {
     pub fn new(tok: Token, p: TypeBase) -> Constant {
         Constant {
-            expr_base: ExprBase::new(tok, Some(p)),
+            expr_base: ExprBase::new(tok, p),
         }
     }
 }
@@ -420,14 +390,14 @@ impl Constant {
 #[inline]
 pub fn constant_true() -> Constant {
     Constant {
-        expr_base: ExprBase::new(Token::Word(Word::Word(word_true())), Some(type_bool())),
+        expr_base: ExprBase::new(Token::Word(Word::Word(word_true())), type_bool()),
     }
 }
 
 #[inline]
 pub fn constant_false() -> Constant {
     Constant {
-        expr_base: ExprBase::new(Token::Word(Word::Word(word_false())), Some(type_bool())),
+        expr_base: ExprBase::new(Token::Word(Word::Word(word_false())), type_bool()),
     }
 }
 
@@ -469,58 +439,136 @@ impl ExprAble for Constant {
         self.expr_base.to_string()
     }
 
-    fn get_type(&self) -> &Option<TypeBase> {
+    fn get_type(&self) -> &TypeBase {
         self.expr_base.get_type()
     }
 }
 
-pub fn new_label(labels: Rc<RefCell<u32>>) {
+pub fn new_label(labels: Rc<RefCell<u32>>) -> u32 {
     *labels.borrow_mut() += 1;
+    *labels.borrow()
 }
 
-/*
-pub trait LogicalAble: ExprAble {
-    fn get_temp_count() -> Rc<RefCell<u8>>;
-
-    fn gen(&self, temp_count: Rc<RefCell<u8>>) -> Box<dyn ExprAble> {
-        Temp
-    }
-
-    fn check(p1: TypeBase, p2: TypeBase) -> Option<TypeBase> {
-        if p1 == type_bool() && p2 == type_bool() {
-            Some(type_bool())
-        }
-        else {
-            None
-        }
-    }
-}
-
-pub struct LogicalBase {
+struct Logical {
     expr_base: ExprBase,
     pub expr1: Box<dyn ExprAble>,
     pub expr2: Box<dyn ExprAble>,
     temp_count: Rc<RefCell<u8>>,
+    labels: Rc<RefCell<u32>>,
 }
-*/
 
-/*
-impl LogicalBase {
-    pub fn new(tok: Token, x1: Box<dyn ExprAble>, x2: Box<dyn ExprAble>) -> LogicalBase {
-        let type_: Option<TypeBase> = LogicalAble::check((*x1).get_type().unwrap(), (*x2).get_type().unwrap());
-        match type_ {
-            None => panic!("type error"), // TODO: should print line
-            Some(t) => {
-                LogicalBase {
-                    expr_base: ExprBase::new(tok, Some(t)),
-                    expr1: x1,
-                    expr2: x2,
-                }
+impl Logical {
+    #[allow(dead_code)]
+    fn new(tok: Token, x1: Box<dyn ExprAble>, x2: Box<dyn ExprAble>,
+               count: Rc<RefCell<u8>>, labels: Rc<RefCell<u32>>) -> Logical {
+
+        if (*(*x1).get_type()) == type_bool() &&
+           (*(*x2).get_type()) == type_bool() {
+
+            Logical {
+                expr_base: ExprBase::new(tok, type_bool()),
+                expr1: x1,
+                expr2: x2,
+                temp_count: count,
+                labels: labels,
             }
+        }
+        else {
+            panic!("type error"); // TODO: should print line
         }
     }
 }
-*/
+
+impl ExprAble for Logical {
+    fn gen(&self) -> Box<dyn ExprAble> {
+        let f = new_label(self.labels.clone());
+        let a = new_label(self.labels.clone());
+        let temp = Temp::new((*self.get_type()).clone(), self.temp_count.clone());
+        self.jumping(0, f);
+        emit(format!("{} = true", temp.to_string()));
+        emit(format!("goto L{}", a));
+        emit_label(f);
+        emit(format!("{} = false", temp.to_string()));
+        emit_label(a);
+        Box::new(temp)
+    }
+
+    fn to_string(&self) -> String {
+        format!("{} {} {}", (*self.expr1).to_string(), self.expr_base.op.to_string(),
+                            (*self.expr2).to_string())
+    }
+
+    // Explicitly inherited:
+
+    fn reduce(&self) -> Box<dyn ExprAble> {
+        self.expr_base.reduce()
+    }
+
+    fn jumping(&self, t: u32, f: u32) {
+        self.expr_base.jumping(t, f);
+    }
+
+    fn emit_jumps(&self, test: String, t: u32, f: u32) {
+        self.expr_base.emit_jumps(test, t, f);
+    }
+
+    fn get_type(&self) -> &TypeBase {
+        self.expr_base.get_type()
+    }
+}
+
+pub struct And {
+    logic: Logical,
+}
+
+impl And {
+    #[allow(dead_code)]
+    pub fn new(tok: Token, x1: Box<dyn ExprAble>, x2: Box<dyn ExprAble>, count: Rc<RefCell<u8>>,
+               labels: Rc<RefCell<u32>>) -> And {
+        And {
+            logic: Logical::new(tok, x1, x2, count, labels),
+        }
+    }
+}
+
+impl ExprAble for And {
+    fn jumping(&self, t: u32, f: u32) {
+        let label: u32;
+        if f != 0 {
+            label = f;
+        }
+        else {
+            label = new_label(self.logic.labels.clone());
+        }
+        self.logic.expr1.jumping(0, label);
+        self.logic.expr2.jumping(t, f);
+        if f == 0 {
+            emit_label(label);
+        }
+    }
+
+    // Explicitly inherited:
+
+    fn gen(&self) -> Box<dyn ExprAble> {
+        self.logic.gen()
+    }
+
+    fn reduce(&self) -> Box<dyn ExprAble> {
+        self.logic.reduce()
+    }
+
+    fn emit_jumps(&self, test: String, t: u32, f: u32) {
+        self.logic.emit_jumps(test, t, f);
+    }
+
+    fn to_string(&self) -> String {
+        self.logic.to_string()
+    }
+
+    fn get_type(&self) -> &TypeBase {
+        self.logic.get_type()
+    }
+}
 
 // Statements:
 
