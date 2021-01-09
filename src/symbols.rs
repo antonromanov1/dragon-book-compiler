@@ -22,7 +22,6 @@ impl Env {
         self.table.insert(w, i);
     }
 
-    #[allow(dead_code)]
     pub fn get(&self, w: &WordBase) -> Option<Id> {
         match self.table.get(w) {
             Some(id) => {

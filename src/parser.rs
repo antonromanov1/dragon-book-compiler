@@ -75,6 +75,63 @@ impl Parser {
     }
     */
 
+    fn assign(&mut self) -> Box<dyn StmtAble> {
+        let stmt: Box<dyn StmtAble>;
+        let t = self.look.clone();
+
+        self.match_(Tag::Id as u32);
+
+        let w = match t.clone() {
+            Token::Word(word) => {
+                match word {
+                    Word::Word(base) => {
+                        base
+                    }
+                    _ => panic!("Unreachable code"),
+                }
+            },
+            _ => panic!("Unreachable code"),
+        };
+        let id = (*self.top.as_ref().unwrap()).get(&w);
+        match id {
+            None => panic!("Undeclared"), // TODO: add temporary to_string
+            _ => {},
+        }
+
+        self.match_('=' as u32);
+        stmt = Box::new(Set::new(Box::new(id.unwrap()), self.bool()));
+        stmt
+    }
+
+    fn bool(&mut self) -> Box<dyn ExprAble> {
+        self.join()
+    }
+
+    fn join(&mut self) -> Box<dyn ExprAble> {
+        self.equality()
+    }
+
+    fn equality(&mut self) -> Box<dyn ExprAble> {
+        self.rel()
+    }
+
+    fn rel(&mut self) -> Box<dyn ExprAble> {
+        self.expr()
+    }
+
+    fn expr(&mut self) -> Box<dyn ExprAble> {
+        let mut x = self.term();
+        while self.look.get_tag().unwrap() == '+' as u32 ||
+              self.look.get_tag().unwrap() == '-' as u32 {
+
+            let tok = self.look.clone();
+            self.move_();
+            x = Box::new(Arith::new(tok, x, self.term(), self.lex.line_num,
+                                    self.temp_count.clone()));
+        }
+        x
+    }
+
     fn term(&mut self) -> Box<dyn ExprAble> {
         let mut x = self.unary();
         while self.look.get_tag().unwrap() == '*' as u32 ||
