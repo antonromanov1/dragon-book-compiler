@@ -20,6 +20,7 @@ pub struct Parser {
     enclosing: Option<Box<dyn StmtAble>>,
     temp_count: Rc<RefCell<u8>>,
     labels: Rc<RefCell<u32>>,
+    used: u32,
 }
 
 #[allow(dead_code)]
@@ -38,6 +39,7 @@ impl Parser {
             enclosing: None,
             temp_count: Rc::new(RefCell::new(0)),
             labels: Rc::new(RefCell::new(0)),
+            used: 0,
         };
         p.move_();
         p
@@ -74,6 +76,72 @@ impl Parser {
     fn block() -> Option<Box<dyn StmtAble>> {
     }
     */
+
+    fn decls(&mut self) {
+        while self.look.get_tag().unwrap() == Tag::Basic as u32 {
+            let p = self.type_();
+            let tok = self.look.clone();
+            self.match_(Tag::Id as u32);
+            self.match_(';' as u32);
+            let w = match tok.clone() {
+                Token::Word(word) => {
+                    match word {
+                        Word::Word(base) => base,
+                        _ => panic!("decls"),
+                    }
+                },
+                _ => panic!("decls"),
+            };
+            let id = Id::new(w.clone(), p.clone(), self.used);
+            (*self.top.as_mut().unwrap()).put(w, id);
+            self.used += p.get_width();
+        }
+    }
+
+    fn type_(&mut self) -> TypeBase {
+        let p = match self.look.clone() {
+            Token::Word(word) => {
+                match word {
+                    Word::Type(t) => t,
+                    _ => panic!("Expected type"),
+                }
+            },
+            _ => panic!("Expected type"),
+        };
+        self.match_(Tag::Basic as u32);
+        p
+    }
+
+    fn stmts(&mut self) -> Option<Box<dyn StmtAble>> {
+        if self.look.get_tag().unwrap() == '}' as u32 {
+            None
+        }
+        else {
+            Some(Box::new(Seq::new(self.stmt(), self.stmts())))
+        }
+    }
+
+    fn stmt(&mut self) -> Option<Box<dyn StmtAble>> {
+        if self.look.get_tag().unwrap() == ';' as u32 {
+            self.move_();
+            None
+        }
+        else if self.look.get_tag().unwrap() == Tag::Break as u32 {
+            self.match_(Tag::Break as u32);
+            self.match_(';' as u32);
+
+            if self.enclosing.is_none() {
+                panic!("unenclosed break"); // TODO: rewrite Break IR
+            }
+            Some(Box::new(Break::new(self.enclosing.take())))
+        }
+        /*
+        else if self.look.get_tag() == '{' as u32
+        */
+        else {
+            Some(self.assign())
+        }
+    }
 
     fn assign(&mut self) -> Box<dyn StmtAble> {
         let stmt: Box<dyn StmtAble>;

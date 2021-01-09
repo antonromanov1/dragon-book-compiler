@@ -17,7 +17,6 @@ impl Env {
         }
     }
 
-    #[allow(dead_code)]
     pub fn put(&mut self, w: WordBase, i: Id) {
         self.table.insert(w, i);
     }

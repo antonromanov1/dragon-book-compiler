@@ -159,7 +159,7 @@ impl Real {
 #[allow(dead_code)]
 pub struct TypeBase {
     pub word: WordBase,
-    width: usize,
+    width: u32,
 }
 
 impl PartialEq for TypeBase {
@@ -215,7 +215,7 @@ pub fn numeric(p: &TypeBase) -> bool {
 
 #[allow(dead_code)]
 impl TypeBase {
-    pub fn new(w: WordBase, wid: usize) -> TypeBase {
+    pub fn new(w: WordBase, wid: u32) -> TypeBase {
         TypeBase {
             word: w,
             width: wid,
@@ -223,7 +223,7 @@ impl TypeBase {
     }
 
     #[inline]
-    pub fn get_width(&self) -> usize {
+    pub fn get_width(&self) -> u32 {
         self.width
     }
 
