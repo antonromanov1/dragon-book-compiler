@@ -573,6 +573,8 @@ impl ExprAble for And {
 // Statements:
 
 pub trait StmtAble {
+    // gen is called with labels begin and after
+
     fn gen(&self, b: u32, a: u32);
     fn get_after(&self) -> u32;
 }
@@ -593,5 +595,78 @@ impl Break {
                 Some(cycle_ptr) => cycle_ptr,
             },
         }
+    }
+}
+
+impl StmtAble for Break {
+    fn gen(&self, _b: u32, _a: u32) {
+        emit(format!("goto L{}", (*self.stmt).get_after()));
+    }
+
+    fn get_after(&self) -> u32 {
+        self.after
+    }
+}
+
+#[allow(dead_code)]
+pub struct Seq {
+    stmt1: Option<Box<dyn StmtAble>>,
+    stmt2: Option<Box<dyn StmtAble>>,
+}
+
+#[allow(dead_code)]
+impl Seq {
+    pub fn new(s1: Option<Box<dyn StmtAble>>, s2: Option<Box<dyn StmtAble>>) -> Seq {
+        Seq {
+            stmt1: s1,
+            stmt2: s2,
+        }
+    }
+}
+
+impl StmtAble for Seq {
+    fn gen(&self, b: u32, a: u32) {
+        if self.stmt1.is_none() {
+            (*self.stmt2.as_ref().unwrap()).gen(b, a);
+        }
+    }
+
+    fn get_after(&self) -> u32 {
+        panic!("Unreachable code");
+    }
+}
+
+#[allow(dead_code)]
+pub struct Set {
+    id: Box<dyn ExprAble>,
+    expr: Box<dyn ExprAble>,
+}
+
+#[allow(dead_code)]
+impl Set {
+    pub fn new(i: Box<dyn ExprAble>, x: Box<dyn ExprAble>) -> Set {
+        let p1 = (*i).get_type();
+        let p2 = (*x).get_type();
+
+        if numeric(p1) && numeric(p2) {}
+        else if *p1 == type_bool() && *p2 == type_bool() {}
+        else {
+            panic!("type error");
+        }
+
+        Set {
+            id: i,
+            expr: x,
+        }
+    }
+}
+
+impl StmtAble for Set {
+    fn gen(&self, _b: u32, _a: u32) {
+        emit(format!("{} = {}", (*self.id).to_string(), (*(*self.expr).gen()).to_string()));
+    }
+
+    fn get_after(&self) -> u32 {
+        panic!("Unreachable code");
     }
 }

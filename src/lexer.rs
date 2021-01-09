@@ -204,7 +204,7 @@ pub fn type_bool() -> TypeBase {
 }
 
 #[inline]
-fn numeric(p: &TypeBase) -> bool {
+pub fn numeric(p: &TypeBase) -> bool {
     if *p == type_int() || *p == type_float() {
         true
     }
