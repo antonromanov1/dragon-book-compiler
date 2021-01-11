@@ -50,12 +50,6 @@ impl Parser {
         std::process::exit(0);
     }
 
-    fn expected(&self, s: &str, expected: &str) -> ! {
-        print!("Syntax error near line {}: ", self.lex.line_num);
-        println!("{}, expected '{}'", s, expected);
-        std::process::exit(0);
-    }
-
     fn match_(&mut self, t: u32) {
         match self.look.get_tag() {
             Some(tag) => {
@@ -63,9 +57,7 @@ impl Parser {
                     self.move_();
                 }
                 else {
-                    // TODO: change, it is a temporary decision, tag is 4 bytes, bad cast
-                    self.expected(&format!("{}", (tag as u8) as char),
-                                  &format!("{}", (t as u8) as char));
+                    self.error("syntax error");
                 }
             },
             None => panic!("End of file reached"),
@@ -73,7 +65,14 @@ impl Parser {
     }
 
     /*
-    fn block() -> Option<Box<dyn StmtAble>> {
+    fn block(&mut self) -> Option<Box<dyn StmtAble>> {
+        self.match_('{' as u32);
+        self.top = Some(Box::new(Env::new(self.top.take())));
+        self.decls();
+        let s = self.stmts();
+        self.match_('}' as u32);
+        self.top = self.top.as_ref().unwrap().prev;
+        s
     }
     */
 

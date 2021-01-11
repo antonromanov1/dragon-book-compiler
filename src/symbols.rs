@@ -5,7 +5,7 @@ use crate::ir::*;
 
 pub struct Env {
     table: HashMap<WordBase, Id>,
-    prev: Option<Box<Env>>,
+    pub prev: Option<Box<Env>>,
 }
 
 impl Env {
