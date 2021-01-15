@@ -22,8 +22,7 @@ impl Node {
     }
 }
 
-#[allow(dead_code)]
-fn emit_label(i: u32) {
+pub fn emit_label(i: u32) {
     print!("L{}:", i);
 }
 

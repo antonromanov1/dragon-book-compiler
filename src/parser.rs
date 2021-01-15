@@ -5,7 +5,6 @@ use crate::ir::*;
 use crate::lexer::*;
 use crate::symbols::*;
 
-#[allow(dead_code)]
 pub struct Parser {
     // lex - lexical analyzer for this parser
     // look - lookahead token
@@ -23,7 +22,6 @@ pub struct Parser {
     used: u32,
 }
 
-#[allow(dead_code)]
 impl Parser {
     fn move_(&mut self) {
         self.look = self.lex.scan();
@@ -64,17 +62,24 @@ impl Parser {
         };
     }
 
-    /*
+    pub fn program(&mut self) {
+        let s = self.block();
+        let begin = new_label(self.labels.clone());
+        let after = new_label(self.labels.clone());
+        emit_label(begin);
+        (*s.unwrap()).gen(begin, after);
+        emit_label(after);
+    }
+
     fn block(&mut self) -> Option<Box<dyn StmtAble>> {
         self.match_('{' as u32);
         self.top = Some(Box::new(Env::new(self.top.take())));
         self.decls();
         let s = self.stmts();
         self.match_('}' as u32);
-        self.top = self.top.as_ref().unwrap().prev;
+        self.top = self.top.take().unwrap().prev;
         s
     }
-    */
 
     fn decls(&mut self) {
         while self.look.get_tag().unwrap() == Tag::Basic as u32 {
@@ -102,7 +107,9 @@ impl Parser {
             Token::Word(word) => {
                 match word {
                     Word::Type(t) => t,
-                    _ => panic!("Expected type"),
+                    Word::Word(word_base) => {
+                        panic!("Expected type, got {}", word_base.lexeme.clone());
+                    },
                 }
             },
             _ => panic!("Expected type"),

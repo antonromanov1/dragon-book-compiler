@@ -156,7 +156,6 @@ impl Real {
     }
 }
 
-#[allow(dead_code)]
 pub struct TypeBase {
     pub word: WordBase,
     width: u32,
@@ -252,7 +251,6 @@ impl Clone for TypeBase {
     }
 }
 
-#[allow(dead_code)]
 pub enum Word {
     Word(WordBase),
     Type(TypeBase),
@@ -267,7 +265,6 @@ impl Clone for Word {
     }
 }
 
-#[allow(dead_code)]
 pub enum Token {
     Token(TokenBase),
     Word(Word),
@@ -351,7 +348,6 @@ impl Clone for Token {
     }
 }
 
-#[allow(dead_code)]
 pub struct Lexer {
     buf_reader: BufReader<File>,
     pub line_num: u32, // uses for syntax error reports
@@ -361,10 +357,12 @@ pub struct Lexer {
     words: HashMap<String, Word>
 }
 
-#[allow(dead_code)]
 impl Lexer {
-    fn reserve(&mut self, w: WordBase) {
-        self.words.insert(w.lexeme.clone(), Word::Word(w));
+    fn reserve(&mut self, w: Word) {
+        match w {
+            Word::Word(word_base) => self.words.insert(word_base.lexeme.clone(), Word::Word(word_base)),
+            Word::Type(type_base) => self.words.insert(type_base.word.lexeme.clone(), Word::Type(type_base)),
+        };
     }
 
     pub fn new(file_name: &str) -> Lexer {
@@ -378,19 +376,19 @@ impl Lexer {
             words: HashMap::new(),
         };
 
-        lex.reserve(WordBase::new("if".to_string(),    Tag::If as u32));
-        lex.reserve(WordBase::new("else".to_string(),  Tag::Else as u32));
-        lex.reserve(WordBase::new("while".to_string(), Tag::While as u32));
-        lex.reserve(WordBase::new("do".to_string(),    Tag::Do as u32));
-        lex.reserve(WordBase::new("break".to_string(), Tag::Break as u32));
+        lex.reserve(Word::Word(WordBase::new("if".to_string(),    Tag::If as u32)));
+        lex.reserve(Word::Word(WordBase::new("else".to_string(),  Tag::Else as u32)));
+        lex.reserve(Word::Word(WordBase::new("while".to_string(), Tag::While as u32)));
+        lex.reserve(Word::Word(WordBase::new("do".to_string(),    Tag::Do as u32)));
+        lex.reserve(Word::Word(WordBase::new("break".to_string(), Tag::Break as u32)));
 
-        lex.reserve(word_true());
-        lex.reserve(word_false());
+        lex.reserve(Word::Word(word_true()));
+        lex.reserve(Word::Word(word_false()));
 
-        lex.reserve(type_int().word);
-        lex.reserve(type_char().word);
-        lex.reserve(type_bool().word);
-        lex.reserve(type_float().word);
+        lex.reserve(Word::Type(type_int()));
+        lex.reserve(Word::Type(type_char()));
+        lex.reserve(Word::Type(type_bool()));
+        lex.reserve(Word::Type(type_float()));
 
         lex
     }
@@ -499,12 +497,15 @@ impl Lexer {
             }
 
             match self.words.get(&s) {
-                Some(x) => {
-                    let w = match x {
-                        Word::Word(y) => y.clone(),
+                Some(word) => {
+                    return Token::Word((*word).clone());
+                    /*
+                    match x {
+                        Word::Word(word_base) => y.clone(),
                         Word::Type(z) => z.word.clone(),
-                    };
+                    }
                     return Token::Word(Word::Word(w));
+                    */
                 }
                 None => {
                     let w = WordBase {
