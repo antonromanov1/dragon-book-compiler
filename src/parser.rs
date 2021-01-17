@@ -173,11 +173,11 @@ impl Parser {
         }
 
         self.match_('=' as u32);
-        stmt = Box::new(Set::new(Box::new(id.unwrap()), self.bool()));
+        stmt = Box::new(Set::new(Box::new(id.unwrap()), self.bool_()));
         stmt
     }
 
-    fn bool(&mut self) -> Box<dyn ExprAble> {
+    fn bool_(&mut self) -> Box<dyn ExprAble> {
         self.join()
     }
 
@@ -245,7 +245,13 @@ impl Parser {
                 }
                 */
 
-                if tag == Tag::Num as u32 {
+                if tag == '(' as u32 {
+                    self.move_();
+                    let x = self.bool_();
+                    self.match_(')' as u32);
+                    return x;
+                }
+                else if tag == Tag::Num as u32 {
                     let x = Box::new(Constant::new(self.look.clone(), type_int()));
                     self.move_();
                     return x;
@@ -290,7 +296,7 @@ impl Parser {
                     return Box::new(id.unwrap());
                 }
                 else {
-                    self.error("syntax error");
+                    self.error(&format!("{}", self.look.to_string()));
                 }
             },
             None => panic!("End of file reached"),

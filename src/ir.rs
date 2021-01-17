@@ -254,6 +254,7 @@ pub struct Arith {
     expr1: Box<dyn ExprAble>,
     expr2: Box<dyn ExprAble>,
     line: u32,
+    count: Rc<RefCell<u8>>,
 }
 
 impl Arith {
@@ -270,10 +271,11 @@ impl Arith {
         match TypeBase::max(type1, type2) {
             Some(type_base) => {
                 return Arith {
-                    op_base: OpBase::new(tok, type_base, count),
+                    op_base: OpBase::new(tok, type_base, count.clone()),
                     expr1: x1,
                     expr2: x2,
                     line: line,
+                    count: count.clone(),
                 };
             },
             None => Arith::error(line, "type error"),
@@ -298,7 +300,11 @@ impl ExprAble for Arith {
     // Explicitly inherited:
 
     fn reduce(&self) -> Box<dyn ExprAble> {
-        self.op_base.reduce()
+        let x = self.gen();
+        let t = Box::new(
+                  Temp::new((*self.get_type()).clone(), self.count.clone()));
+        emit(format!("{} = {}", t.to_string(), x.to_string()));
+        t
     }
 
     fn jumping(&self, t: u32, f: u32) {
