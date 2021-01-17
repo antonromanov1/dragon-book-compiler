@@ -3,12 +3,10 @@ use std::cell::RefCell;
 
 use crate::lexer::*;
 
-#[allow(dead_code)]
 struct Node {
     lexer_line: u32,
 }
 
-#[allow(dead_code)]
 impl Node {
     fn new(line: u32) -> Node {
         Node {
@@ -100,13 +98,11 @@ impl ExprAble for ExprBase {
     }
 }
 
-#[allow(dead_code)]
 struct Temp {
     expr_base: ExprBase,
     number: u8,
 }
 
-#[allow(dead_code)]
 impl Temp {
     fn new(p: TypeBase, temp_count: Rc<RefCell<u8>>) -> Temp {
         {
@@ -162,7 +158,6 @@ pub struct Id {
 }
 
 impl Id {
-    #[allow(dead_code)]
     pub fn new(id: WordBase, p: TypeBase, b: u32) -> Id {
         Id {
             expr_base: ExprBase::new(Token::Word(Word::Word(id)), p),
@@ -269,12 +264,6 @@ impl Arith {
 
     pub fn new(tok: Token, x1: Box<dyn ExprAble>, x2: Box<dyn ExprAble>, line: u32,
                count: Rc<RefCell<u8>>) -> Arith {
-        /*let mut ret = Arith {
-            op_base: OpBase::new(tok, None, count),
-            expr1: x1,
-            expr2: x2,
-            line: line,
-        };*/
 
         let type1 = (*x1).get_type();
         let type2 = (*x2).get_type();
@@ -289,7 +278,6 @@ impl Arith {
             },
             None => Arith::error(line, "type error"),
         };
-        // ret
     }
 }
 
@@ -578,13 +566,11 @@ pub trait StmtAble {
     fn get_after(&self) -> u32;
 }
 
-#[allow(dead_code)]
 pub struct Break {
     after: u32,
     stmt: Box<dyn StmtAble>,
 }
 
-#[allow(dead_code)]
 impl Break {
     pub fn new(enclosing: Option<Box<dyn StmtAble>>) -> Break {
         Break {
@@ -607,13 +593,11 @@ impl StmtAble for Break {
     }
 }
 
-#[allow(dead_code)]
 pub struct Seq {
     stmt1: Option<Box<dyn StmtAble>>,
     stmt2: Option<Box<dyn StmtAble>>,
 }
 
-#[allow(dead_code)]
 impl Seq {
     pub fn new(s1: Option<Box<dyn StmtAble>>, s2: Option<Box<dyn StmtAble>>) -> Seq {
         Seq {
@@ -635,13 +619,11 @@ impl StmtAble for Seq {
     }
 }
 
-#[allow(dead_code)]
 pub struct Set {
     id: Box<dyn ExprAble>,
     expr: Box<dyn ExprAble>,
 }
 
-#[allow(dead_code)]
 impl Set {
     pub fn new(i: Box<dyn ExprAble>, x: Box<dyn ExprAble>) -> Set {
         let p1 = (*i).get_type();

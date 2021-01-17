@@ -4,7 +4,6 @@ use std::io::Read;
 use std::collections::HashMap;
 
 /// This enumeration represents token types except for symbols such {, }, etc.
-#[allow(dead_code)]
 pub enum Tag {
     And = 256,
     Basic, // primitive types such as char, bool, int, float and array
@@ -28,12 +27,10 @@ pub enum Tag {
     While,
 }
 
-#[allow(dead_code)]
 pub struct TokenBase {
     pub tag: u32,
 }
 
-#[allow(dead_code)]
 impl TokenBase {
     fn new(c: u32) -> TokenBase {
         TokenBase {
@@ -42,7 +39,6 @@ impl TokenBase {
     }
 }
 
-#[allow(dead_code)]
 pub struct WordBase {
     pub token: TokenBase,
     pub lexeme: String,
@@ -57,7 +53,6 @@ impl WordBase {
     }
 }
 
-#[allow(dead_code)]
 impl Clone for WordBase {
     fn clone(&self) -> Self {
         WordBase {
@@ -69,7 +64,6 @@ impl Clone for WordBase {
     }
 }
 
-#[allow(dead_code)]
 impl PartialEq for WordBase {
     fn eq(&self, other: &Self) -> bool {
         if (*self).token.tag != (*other).token.tag {
@@ -120,13 +114,11 @@ pub fn word_minus() -> WordBase {
     WordBase::new("minus".to_string(), Tag::Minus as u32)
 }
 
-#[allow(dead_code)]
 pub struct Num {
     token: TokenBase,
     pub value: u32,
 }
 
-#[allow(dead_code)]
 impl Num {
     pub fn new(v: u32) -> Num {
         Num {
@@ -138,13 +130,11 @@ impl Num {
     }
 }
 
-#[allow(dead_code)]
 pub struct Real {
     token: TokenBase,
     pub value: f32,
 }
 
-#[allow(dead_code)]
 impl Real {
     pub fn new(v: f32) -> Real {
         Real {
@@ -212,8 +202,8 @@ pub fn numeric(p: &TypeBase) -> bool {
     }
 }
 
-#[allow(dead_code)]
 impl TypeBase {
+    #[allow(dead_code)]
     pub fn new(w: WordBase, wid: u32) -> TypeBase {
         TypeBase {
             word: w,

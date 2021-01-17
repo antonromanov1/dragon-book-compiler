@@ -9,7 +9,6 @@ pub struct Env {
 }
 
 impl Env {
-    #[allow(dead_code)]
     pub fn new(n: Option<Box<Env>>) -> Env {
         Env {
             table: HashMap::new(),
