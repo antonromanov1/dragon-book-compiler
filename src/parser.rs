@@ -120,17 +120,17 @@ impl Parser {
 
     fn stmts(&mut self) -> Option<Box<dyn StmtAble>> {
         if self.look.get_tag().unwrap() == '}' as u32 {
-            None
+            Some(Box::new(Null {}))
         }
         else {
-            Some(Box::new(Seq::new(self.stmt(), self.stmts())))
+            Some(Box::new(Seq::new(self.stmt(), self.stmts(), self.labels.clone())))
         }
     }
 
     fn stmt(&mut self) -> Option<Box<dyn StmtAble>> {
         if self.look.get_tag().unwrap() == ';' as u32 {
             self.move_();
-            None
+            Some(Box::new(Null {}))
         }
         else if self.look.get_tag().unwrap() == Tag::Break as u32 {
             self.match_(Tag::Break as u32);

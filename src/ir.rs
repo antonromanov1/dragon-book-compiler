@@ -562,8 +562,21 @@ impl ExprAble for And {
 pub trait StmtAble {
     // gen is called with labels begin and after
 
-    fn gen(&self, b: u32, a: u32);
-    fn get_after(&self) -> u32;
+    fn gen(&self, _b: u32, _a: u32) {}
+    fn get_after(&self) -> u32 {
+        0
+    }
+    fn is_null(&self) -> bool {
+        false
+    }
+}
+
+pub struct Null {}
+
+impl StmtAble for Null {
+    fn is_null(&self) -> bool {
+        true
+    }
 }
 
 pub struct Break {
@@ -596,21 +609,33 @@ impl StmtAble for Break {
 pub struct Seq {
     stmt1: Option<Box<dyn StmtAble>>,
     stmt2: Option<Box<dyn StmtAble>>,
+    labels: Rc<RefCell<u32>>,
 }
 
 impl Seq {
-    pub fn new(s1: Option<Box<dyn StmtAble>>, s2: Option<Box<dyn StmtAble>>) -> Seq {
+    pub fn new(s1: Option<Box<dyn StmtAble>>, s2: Option<Box<dyn StmtAble>>,
+               labels: Rc<RefCell<u32>>) -> Seq {
         Seq {
             stmt1: s1,
             stmt2: s2,
+            labels: labels,
         }
     }
 }
 
 impl StmtAble for Seq {
     fn gen(&self, b: u32, a: u32) {
-        if self.stmt1.is_none() {
+        if (*(*self.stmt1.as_ref().unwrap())).is_null() {
             (*self.stmt2.as_ref().unwrap()).gen(b, a);
+        }
+        else if (*(*self.stmt2.as_ref().unwrap())).is_null() {
+            (*self.stmt1.as_ref().unwrap()).gen(b, a);
+        }
+        else {
+            let label = new_label(self.labels.clone());
+            (*self.stmt1.as_ref().unwrap()).gen(b, label);
+            emit_label(label);
+            (*self.stmt2.as_ref().unwrap()).gen(label, a);
         }
     }
 
@@ -645,9 +670,5 @@ impl Set {
 impl StmtAble for Set {
     fn gen(&self, _b: u32, _a: u32) {
         emit(format!("{} = {}", (*self.id).to_string(), (*(*self.expr).gen()).to_string()));
-    }
-
-    fn get_after(&self) -> u32 {
-        panic!("Unreachable code");
     }
 }
