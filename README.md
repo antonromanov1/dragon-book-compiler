@@ -13,9 +13,7 @@ Firstly you have to build it:
 cargo build
 ```
 
-Secondly create source file called `input.iz` and insert code from the example
-
 Compiling source:
 ```bash
-./target/debug/izber input.iz
+./target/debug/izber main.iz
 ```
