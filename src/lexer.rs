@@ -6,25 +6,25 @@ use std::collections::HashMap;
 /// This enumeration represents token types except for symbols such {, }, etc.
 pub enum Tag {
     And = 256,
-    // Basic, // primitive types such as char, bool, int, float and array
-    // Break,
-    // Do,
+    Basic, // primitive types such as char, bool, int, float and array
+    Break,
+    Do,
     Else,
     Eq_,
-    // False,
+    False,
     // Ge,
     Id,
     If,
     // Index,
     // Le,
-    // Minus,
+    Minus,
     // Ne,
     Num,
     Or,
     Real,
-    // Temp,
-    // True,
-    // While,
+    Temp,
+    True,
+    While,
 }
 
 pub struct TokenBase {
@@ -32,9 +32,9 @@ pub struct TokenBase {
 }
 
 impl TokenBase {
-    fn new(c: char) -> TokenBase {
+    fn new(c: u32) -> TokenBase {
         TokenBase {
-            tag: c as u32,
+            tag: c,
         }
     }
 }
@@ -42,6 +42,15 @@ impl TokenBase {
 pub struct WordBase {
     pub token: TokenBase,
     pub lexeme: String,
+}
+
+impl WordBase {
+    pub fn new(s: String, tag: u32) -> WordBase {
+        WordBase {
+            token: TokenBase::new(tag),
+            lexeme: s,
+        }
+    }
 }
 
 impl Clone for WordBase {
@@ -55,31 +64,54 @@ impl Clone for WordBase {
     }
 }
 
+impl PartialEq for WordBase {
+    fn eq(&self, other: &Self) -> bool {
+        if (*self).token.tag != (*other).token.tag {
+            false;
+        }
+        (*self).lexeme == (*other).lexeme
+    }
+}
+
+impl Eq for WordBase {}
+
+use std::hash::{Hash, Hasher};
+
+impl Hash for WordBase {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.token.tag.hash(state);
+        self.lexeme.hash(state);
+    }
+}
+
+#[inline]
 fn word_and() -> WordBase {
-    WordBase {
-        token: TokenBase {
-            tag: Tag::And as u32,
-        },
-        lexeme: "&&".to_string(),
-    }
+    WordBase::new("&&".to_string(), Tag::And as u32)
 }
 
+#[inline]
 fn word_or() -> WordBase {
-    WordBase {
-        token: TokenBase {
-            tag: Tag::Or as u32,
-        },
-        lexeme: "||".to_string(),
-    }
+    WordBase::new("||".to_string(), Tag::Or as u32)
 }
 
+#[inline]
 fn word_eq() -> WordBase {
-    WordBase {
-        token: TokenBase {
-            tag: Tag::Eq_ as u32,
-        },
-        lexeme: "==".to_string(),
-    }
+    WordBase::new("==".to_string(), Tag::Eq_ as u32)
+}
+
+#[inline]
+pub fn word_true() -> WordBase {
+    WordBase::new("true".to_string(), Tag::True as u32)
+}
+
+#[inline]
+pub fn word_false() -> WordBase {
+    WordBase::new("false".to_string(), Tag::False as u32)
+}
+
+#[inline]
+pub fn word_minus() -> WordBase {
+    WordBase::new("minus".to_string(), Tag::Minus as u32)
 }
 
 pub struct Num {
@@ -116,11 +148,63 @@ impl Real {
 
 pub struct TypeBase {
     pub word: WordBase,
-    width: usize,
+    width: u32,
+}
+
+impl PartialEq for TypeBase {
+    fn eq(&self, other: &Self) -> bool {
+        if self.word.token.tag != other.word.token.tag {
+            return false;
+        }
+        true
+    }
+}
+
+#[inline]
+pub fn type_int() -> TypeBase {
+    TypeBase {
+        word: WordBase::new("int".to_string(), Tag::Basic as u32),
+        width: 4,
+    }
+}
+
+#[inline]
+pub fn type_float() -> TypeBase {
+    TypeBase {
+        word: WordBase::new("float".to_string(), Tag::Basic as u32),
+        width: 8,
+    }
+}
+
+#[inline]
+pub fn type_char() -> TypeBase {
+    TypeBase {
+        word: WordBase::new("char".to_string(), Tag::Basic as u32),
+        width: 1,
+    }
+}
+
+#[inline]
+pub fn type_bool() -> TypeBase {
+    TypeBase {
+        word: WordBase::new("bool".to_string(), Tag::Basic as u32),
+        width: 1,
+    }
+}
+
+#[inline]
+pub fn numeric(p: &TypeBase) -> bool {
+    if *p == type_int() || *p == type_float() {
+        true
+    }
+    else {
+        false
+    }
 }
 
 impl TypeBase {
-    pub fn new(w: WordBase, wid: usize) -> TypeBase {
+    #[allow(dead_code)]
+    pub fn new(w: WordBase, wid: u32) -> TypeBase {
         TypeBase {
             word: w,
             width: wid,
@@ -128,14 +212,47 @@ impl TypeBase {
     }
 
     #[inline]
-    pub fn get_width(&self) -> usize {
+    pub fn get_width(&self) -> u32 {
         self.width
+    }
+
+    pub fn max(p1: &TypeBase, p2: &TypeBase) -> Option<TypeBase> {
+        if ! numeric(p1) || ! numeric(p2) {
+            None
+        }
+        else if *p1 == type_float() || *p2 == type_float() {
+            Some(type_float())
+        }
+        else if *p1 == type_int() || *p2 == type_int() {
+            Some(type_int())
+        }
+        else {
+            Some(type_char())
+        }
+    }
+}
+
+impl Clone for TypeBase {
+    fn clone(&self) -> Self {
+        TypeBase {
+            word: self.word.clone(),
+            width: self.width,
+        }
     }
 }
 
 pub enum Word {
     Word(WordBase),
-    // Type(TypeBase),
+    Type(TypeBase),
+}
+
+impl Clone for Word {
+    fn clone(&self) -> Self {
+        match &*self {
+            Word::Word(word) => Word::Word(word.clone()),
+            Word::Type(type_) => Word::Type(type_.clone()),
+        }
+    }
 }
 
 pub enum Token {
@@ -153,12 +270,70 @@ impl Token {
             Token::Word(b) => {
                 match b {
                     Word::Word(x) => Some(x.token.tag),
-                    // Word::Type(y) => Some(y.word.token.tag),
+                    Word::Type(y) => Some(y.word.token.tag),
                 }
-            }
+            } // TODO: find out why comma is not here
             Token::Num(c) => Some(c.token.tag),
             Token::Real(d) => Some(d.token.tag),
-            _ => None
+            Token::Eof => None
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        match &*self {
+            Token::Token(a) => {
+                let mut s = String::new();
+                s.push(std::char::from_u32(a.tag).unwrap());
+                s
+            },
+            Token::Word(b) => {
+                match b {
+                    Word::Word(x) => x.lexeme.clone(),
+                    Word::Type(y) => y.word.lexeme.clone(),
+                }
+            },
+            Token::Num(c) => format!("{}", c.value),
+            Token::Real(d) => format!("{}", d.value),
+            _ => panic!(),
+        }
+    }
+}
+
+impl Clone for Token {
+    fn clone(&self) -> Self {
+        match &*self {
+            Token::Token(tok) => {
+                Token::Token(TokenBase {
+                    tag: tok.tag,
+                })
+            },
+            Token::Word(word) => {
+                match word {
+                    Word::Word(word_base) => {
+                        Token::Word(Word::Word(word_base.clone()))
+                    },
+                    Word::Type(type_base) => {
+                        Token::Word(Word::Type(type_base.clone()))
+                    },
+                }
+            },
+            Token::Num(num) => {
+                Token::Num(Num {
+                    token: TokenBase {
+                        tag: num.token.tag,
+                    },
+                    value: num.value,
+                })
+            }
+            Token::Real(real) => {
+                Token::Real(Real {
+                    token: TokenBase {
+                        tag: real.token.tag,
+                    },
+                    value: real.value,
+                })
+            }
+            _ => panic!("token clone"),
         }
     }
 }
@@ -175,10 +350,8 @@ pub struct Lexer {
 impl Lexer {
     fn reserve(&mut self, w: Word) {
         match w {
-            Word::Word(x) => self.words.insert(x.lexeme.clone(),
-                                                    Word::Word(x)),
-            // Word::Type(y) => self.words.insert(y.word.lexeme.clone(),
-                                                    // Word::Type(y)),
+            Word::Word(word_base) => self.words.insert(word_base.lexeme.clone(), Word::Word(word_base)),
+            Word::Type(type_base) => self.words.insert(type_base.word.lexeme.clone(), Word::Type(type_base)),
         };
     }
 
@@ -193,18 +366,19 @@ impl Lexer {
             words: HashMap::new(),
         };
 
-        lex.reserve(Word::Word(WordBase {
-            lexeme: "if".to_string(),
-            token: TokenBase {
-                tag: Tag::If as u32,
-            },
-        }));
-        lex.reserve(Word::Word(WordBase {
-            lexeme: "else".to_string(),
-            token: TokenBase {
-                tag: Tag::Else as u32,
-            },
-        }));
+        lex.reserve(Word::Word(WordBase::new("if".to_string(),    Tag::If as u32)));
+        lex.reserve(Word::Word(WordBase::new("else".to_string(),  Tag::Else as u32)));
+        lex.reserve(Word::Word(WordBase::new("while".to_string(), Tag::While as u32)));
+        lex.reserve(Word::Word(WordBase::new("do".to_string(),    Tag::Do as u32)));
+        lex.reserve(Word::Word(WordBase::new("break".to_string(), Tag::Break as u32)));
+
+        lex.reserve(Word::Word(word_true()));
+        lex.reserve(Word::Word(word_false()));
+
+        lex.reserve(Word::Type(type_int()));
+        lex.reserve(Word::Type(type_char()));
+        lex.reserve(Word::Type(type_bool()));
+        lex.reserve(Word::Type(type_float()));
 
         lex
     }
@@ -257,19 +431,19 @@ impl Lexer {
                 return Token::Word(Word::Word(word_and()))
             }
             else {
-                return Token::Token(TokenBase::new('&'))
+                return Token::Token(TokenBase::new('&' as u32))
             },
             '|' => if self.readch('|') {
                 return Token::Word(Word::Word(word_or()))
             }
             else {
-                return Token::Token(TokenBase::new('|'))
+                return Token::Token(TokenBase::new('|' as u32))
             },
             '=' => if self.readch('=') {
                 return Token::Word(Word::Word(word_eq()))
             }
             else {
-                return Token::Token(TokenBase::new('='))
+                return Token::Token(TokenBase::new('=' as u32))
             },
             _ => (),
         }
@@ -313,12 +487,15 @@ impl Lexer {
             }
 
             match self.words.get(&s) {
-                Some(x) => {
-                    let w = match x {
-                        Word::Word(y) => y.clone(),
-                        // Word::Type(z) => z.word.clone(),
-                    };
+                Some(word) => {
+                    return Token::Word((*word).clone());
+                    /*
+                    match x {
+                        Word::Word(word_base) => y.clone(),
+                        Word::Type(z) => z.word.clone(),
+                    }
                     return Token::Word(Word::Word(w));
+                    */
                 }
                 None => {
                     let w = WordBase {
@@ -333,7 +510,7 @@ impl Lexer {
             }
         }
 
-        let tok = Token::Token(TokenBase::new(self.peek));
+        let tok = Token::Token(TokenBase::new(self.peek as u32));
         self.peek = ' ';
         tok
     }

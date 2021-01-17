@@ -1,8 +1,10 @@
 mod lexer;
+mod ir;
+mod symbols;
 mod parser;
-mod generate;
-use lexer::*;
-use parser::*;
+
+use lexer::Lexer;
+use parser::Parser;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -12,14 +14,6 @@ fn main() {
     }
     let lex = Lexer::new(&(args[1]));
     let mut parser = Parser::new(lex);
-
-    let set = parser.program();
-
-    let start = std::time::Instant::now();
-    match generate::generate(set.0, set.1, set.2, &(args[1])) {
-        Ok(_v) => {
-            println!("Generated in: {} seconds", start.elapsed().as_secs_f32());
-        },
-        Err(e) => println!("{:?}", e),
-    };
+    parser.program();
+    println!("");
 }

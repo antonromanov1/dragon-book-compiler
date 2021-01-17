@@ -1,26 +1,25 @@
+use std::rc::Rc;
+use std::cell::RefCell;
+
+use crate::ir::*;
 use crate::lexer::*;
-use std::collections::HashMap;
-
-#[allow(dead_code)]
-struct Set {
-    id: String,
-}
-
-enum Stmt {
-    Null,
-    // Assign(Set),
-}
-
-#[allow(dead_code)]
-pub struct Node {
-    left: Option<Box<Node>>,
-    right: Option<Box<Node>>,
-    stmt: Stmt,
-}
+use crate::symbols::*;
 
 pub struct Parser {
+    // lex - lexical analyzer for this parser
+    // look - lookahead token
+    // top - current or top symbol table
+    // enclosing - pointer to enclosing loop
+    // temp_count - number of temporary variables
+    // labels - number of labels
+
     lex: Lexer,
     look: Token,
+    top: Option<Box<Env>>,
+    enclosing: Option<Box<dyn StmtAble>>,
+    temp_count: Rc<RefCell<u8>>,
+    labels: Rc<RefCell<u32>>,
+    used: u32,
 }
 
 impl Parser {
@@ -34,6 +33,11 @@ impl Parser {
             look: Token::Token(TokenBase {
                 tag: 0,
             }),
+            top: None,
+            enclosing: None,
+            temp_count: Rc::new(RefCell::new(0)),
+            labels: Rc::new(RefCell::new(0)),
+            used: 0,
         };
         p.move_();
         p
@@ -44,191 +48,258 @@ impl Parser {
         std::process::exit(0);
     }
 
-    fn expected(&self, s: &str, expected: &str) -> ! {
-        print!("Syntax error near line {}: ", self.lex.line_num);
-        println!("{}, expected '{}'", s, expected);
-        std::process::exit(0);
-    }
-
     fn match_(&mut self, t: u32) {
         match self.look.get_tag() {
-            Some(a) => {
-                if a == t {
+            Some(tag) => {
+                if tag == t {
                     self.move_();
                 }
                 else {
-                    // A temporary decision, tag is 4 bytes, bad cast
-                    // TODO
-                    self.expected(&format!("{}", (a as u8) as char),
-                                  &format!("{}", (t as u8) as char));
+                    self.error("syntax error");
                 }
             },
-            _ => panic!("Unexpected event"),
+            None => panic!("End of file reached"),
         };
     }
 
-    fn match_word(&mut self, s: &str) {
-        match &self.look {
-            Token::Word(a) => {
-                match a {
-                    Word::Word(x) => {
-                        if &(x.lexeme) == s {
-                            self.move_();
-                        }
-                        else {
-                            self.expected(&x.lexeme, s);
-                        }
-                    },
-                    /*Word::Type(y) => {
-                        if &(y.word.lexeme) == s {
-                            self.move_();
-                        }
-                        else {
-                            self.error("syntax error3");
-                        }
-                    }*/
-                };
-            },
-            _ => {
-                self.error("syntax error4");
-            }
-        }
+    pub fn program(&mut self) {
+        let s = self.block();
+        let begin = new_label(self.labels.clone());
+        let after = new_label(self.labels.clone());
+        emit_label(begin);
+        (*s.unwrap()).gen(begin, after);
+        emit_label(after);
     }
 
-    fn read_word(&self, s: &str) -> bool {
-        match &self.look {
-            Token::Word(a) => {
-                match a {
-                    Word::Word(x) => {
-                        if &x.lexeme == s {
-                            true
-                        }
-                        else {
-                            false
-                        }
-                    },
-                    /* Word::Type(y) => {
-                        if &y.word.lexeme == s {
-                            true
-                        }
-                        else {
-                            false
-                        }
-                    },*/
-                }
-            },
-            _ => {
-                // self.error("syntax error5");
-                false
-            },
-        }
+    fn block(&mut self) -> Option<Box<dyn StmtAble>> {
+        self.match_('{' as u32);
+        self.top = Some(Box::new(Env::new(self.top.take())));
+        self.decls();
+        let s = self.stmts();
+        self.match_('}' as u32);
+        self.top = self.top.take().unwrap().prev;
+        s
     }
 
-    #[inline]
-    #[allow(dead_code)]
-    fn not_id(&self) -> String {
-        self.error("should be identifier here");
-    }
-
-    fn stmt(&mut self, variables: &HashMap<String, TypeBase>)
-        -> Option<Box<Node>> {
-        match &self.look {
-            Token::Word(w) => {
-                match w {
-                    Word::Word(wo) => {
-                        match variables.get(&wo.lexeme) {
-                            Some(_x) => self.move_(),
-                            None => panic!("{}: no variable", wo.lexeme),
-                        }
-                    },
-                }
-            },
-            _ => self.move_(),
-        }
-        None
-
-        /*self.move_();
-        None*/
-
-        /*Some(Box::new(Node {
-            left: None,
-            right: None,
-            stmt: Stmt::Print("".to_string()),
-        }))*/
-    }
-
-    fn stmts(&mut self, variables: &HashMap<String, TypeBase>)
-        -> Option<Box<Node>> {
-        match &self.look {
-            Token::Eof => None,
-            _ => {
-                Some(Box::new(Node {
-                    left: self.stmt(&variables),
-                    right: self.stmts(&variables),
-                    stmt: Stmt::Null,
-                }))
-            },
-        }
-    }
-
-    /// variable declarations handling here
-    #[inline]
-    fn declarations(&mut self, used: &mut usize,
-                    variables: &mut HashMap::<String, TypeBase>) {
-        while self.read_word("let") {
-            self.match_word("let");
-            let id = match &self.look {
-                Token::Word(x) => match x {
-                    Word::Word(a) => a.lexeme.clone(),
-                    // _ => String::new(),
-                },
-                // TODO: String::new() is wrong, should be replaced
-                _ => String::new(),
-            };
+    fn decls(&mut self) {
+        while self.look.get_tag().unwrap() == Tag::Basic as u32 {
+            let p = self.type_();
+            let tok = self.look.clone();
             self.match_(Tag::Id as u32);
-            self.match_(':' as u32);
-            let type_ = match &self.look {
-                Token::Word(a) => match a {
-                    Word::Word(x) => {
-                        let w: usize;
-                        if x.lexeme == "uint32" {
-                            w = 4;
-                        }
-                        else if x.lexeme == "uint64" {
-                            w = 8;
-                        }
-                        else {
-                            println!("Unknown type {}", x.lexeme);
-                            std::process::exit(0);
-                        }
-
-                        *used = *used + w;
-                        TypeBase::new(x.clone(), w)
-                    },
+            self.match_(';' as u32);
+            let w = match tok.clone() {
+                Token::Word(word) => {
+                    match word {
+                        Word::Word(base) => base,
+                        _ => panic!("decls"),
+                    }
                 },
-                _ => self.error("Should be a type")
+                _ => panic!("decls"),
             };
+            let id = Id::new(w.clone(), p.clone(), self.used);
+            (*self.top.as_mut().unwrap()).put(w, id);
+            self.used += p.get_width();
+        }
+    }
+
+    fn type_(&mut self) -> TypeBase {
+        let p = match self.look.clone() {
+            Token::Word(word) => {
+                match word {
+                    Word::Type(t) => t,
+                    Word::Word(word_base) => {
+                        panic!("Expected type, got {}", word_base.lexeme.clone());
+                    },
+                }
+            },
+            _ => panic!("Expected type"),
+        };
+        self.match_(Tag::Basic as u32);
+        p
+    }
+
+    fn stmts(&mut self) -> Option<Box<dyn StmtAble>> {
+        if self.look.get_tag().unwrap() == '}' as u32 {
+            Some(Box::new(Null {}))
+        }
+        else {
+            Some(Box::new(Seq::new(self.stmt(), self.stmts(), self.labels.clone())))
+        }
+    }
+
+    fn stmt(&mut self) -> Option<Box<dyn StmtAble>> {
+        if self.look.get_tag().unwrap() == ';' as u32 {
             self.move_();
+            Some(Box::new(Null {}))
+        }
+        else if self.look.get_tag().unwrap() == Tag::Break as u32 {
+            self.match_(Tag::Break as u32);
             self.match_(';' as u32);
 
-            variables.insert(id, type_);
+            if self.enclosing.is_none() {
+                panic!("unenclosed break"); // TODO: rewrite Break IR
+            }
+            Some(Box::new(Break::new(self.enclosing.take())))
+        }
+        /*
+        else if self.look.get_tag() == '{' as u32
+        */
+        else {
+            Some(self.assign())
         }
     }
 
-    pub fn program(&mut self) -> (usize, HashMap<String, TypeBase>, Option<Box<Node>>) {
-        let mut used: usize = 0;
-        let mut variables = HashMap::<String, TypeBase>::new();
+    fn assign(&mut self) -> Box<dyn StmtAble> {
+        let stmt: Box<dyn StmtAble>;
+        let t = self.look.clone();
 
-        self.match_word("def");
-        self.match_word("main");
-        self.match_('(' as u32);
-        self.match_(')' as u32);
-        self.match_('{' as u32);
+        self.match_(Tag::Id as u32);
 
-        self.declarations(&mut used, &mut variables);
+        let w = match t.clone() {
+            Token::Word(word) => {
+                match word {
+                    Word::Word(base) => {
+                        base
+                    }
+                    _ => panic!("Unreachable code"),
+                }
+            },
+            _ => panic!("Unreachable code"),
+        };
+        let id = (*self.top.as_ref().unwrap()).get(&w);
+        match id {
+            None => panic!("Undeclared"), // TODO: add temporary to_string
+            _ => {},
+        }
 
-        let ast = self.stmts(&variables);
+        self.match_('=' as u32);
+        stmt = Box::new(Set::new(Box::new(id.unwrap()), self.bool_()));
+        stmt
+    }
 
-        (used, variables, ast)
+    fn bool_(&mut self) -> Box<dyn ExprAble> {
+        self.join()
+    }
+
+    fn join(&mut self) -> Box<dyn ExprAble> {
+        self.equality()
+    }
+
+    fn equality(&mut self) -> Box<dyn ExprAble> {
+        self.rel()
+    }
+
+    fn rel(&mut self) -> Box<dyn ExprAble> {
+        self.expr()
+    }
+
+    fn expr(&mut self) -> Box<dyn ExprAble> {
+        let mut x = self.term();
+        while self.look.get_tag().unwrap() == '+' as u32 ||
+              self.look.get_tag().unwrap() == '-' as u32 {
+
+            let tok = self.look.clone();
+            self.move_();
+            x = Box::new(Arith::new(tok, x, self.term(), self.lex.line_num,
+                                    self.temp_count.clone()));
+        }
+        x
+    }
+
+    fn term(&mut self) -> Box<dyn ExprAble> {
+        let mut x = self.unary();
+        while self.look.get_tag().unwrap() == '*' as u32 ||
+              self.look.get_tag().unwrap() == '/' as u32 {
+
+            let tok = self.look.clone();
+            self.move_();
+            x = Box::new(Arith::new(tok, x, self.unary(), self.lex.line_num,
+                                    self.temp_count.clone()));
+        }
+        x
+    }
+
+    fn unary(&mut self) -> Box<dyn ExprAble> {
+        if self.look.get_tag().unwrap() == '-' as u32 {
+            self.move_();
+            return Box::new(Unary::new(Token::Word(Word::Word(word_minus())), self.unary(),
+                                       self.temp_count.clone()));
+        }
+        else {
+            return self.factor();
+        }
+    }
+
+    fn factor(&mut self) -> Box<dyn ExprAble> {
+        match self.look.get_tag() {
+            Some(tag) => {
+                /*
+                if tag == '(' as u32 {
+                    self.move_();
+                    let x = self.bool_();
+                    self.match_(')');
+                    return x;
+                }
+                else if tag == Tag::Num as u32 {
+                ...
+                }
+                */
+
+                if tag == '(' as u32 {
+                    self.move_();
+                    let x = self.bool_();
+                    self.match_(')' as u32);
+                    return x;
+                }
+                else if tag == Tag::Num as u32 {
+                    let x = Box::new(Constant::new(self.look.clone(), type_int()));
+                    self.move_();
+                    return x;
+                }
+                else if tag == Tag::Real as u32 {
+                    let x = Box::new(Constant::new(self.look.clone(), type_float()));
+                    self.move_();
+                    return x;
+                }
+                else if tag == Tag::True as u32 {
+                    let x = Box::new(constant_true());
+                    self.move_();
+                    return x;
+                }
+                else if tag == Tag::False as u32 {
+                    let x = Box::new(constant_false());
+                    self.move_();
+                    return x;
+                }
+                else if tag == Tag::Id as u32 {
+                    let s = self.look.to_string();
+                    #[allow(unused_assignments)]
+                    let mut id: Option<Id> = None;
+
+                    match &self.look {
+                        Token::Word(word) => {
+                            match &word {
+                                Word::Word(w) => {
+                                    id = (*self.top.as_ref().unwrap()).get(&w);
+                                },
+                                _ => panic!("Unreachable"),
+                            }
+                        },
+                        _ => panic!("Unreachable"),
+                    }
+
+                    match id {
+                        None => self.error(&format!("{} undeclared", s)),
+                        _ => {}
+                    }
+                    self.move_();
+                    return Box::new(id.unwrap());
+                }
+                else {
+                    self.error(&format!("{}", self.look.to_string()));
+                }
+            },
+            None => panic!("End of file reached"),
+        }
     }
 }
