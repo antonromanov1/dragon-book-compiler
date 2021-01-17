@@ -297,8 +297,6 @@ impl ExprAble for Arith {
         )
     }
 
-    // Explicitly inherited:
-
     fn reduce(&self) -> Box<dyn ExprAble> {
         let x = self.gen();
         let t = Box::new(
@@ -306,6 +304,8 @@ impl ExprAble for Arith {
         emit(format!("{} = {}", t.to_string(), x.to_string()));
         t
     }
+
+    // Explicitly inherited:
 
     fn jumping(&self, t: u32, f: u32) {
         self.op_base.jumping(t, f);
