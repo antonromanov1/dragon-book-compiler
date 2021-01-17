@@ -55,12 +55,3 @@ impl Env {
         None
     }
 }
-
-/*
-// a work piece
-pub fn block() {
-    let top = None;
-    let mut top = Some(Box::new(Env::new(top)));
-    top = top.unwrap().prev;
-}
-*/
