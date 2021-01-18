@@ -40,6 +40,7 @@ pub trait ExprAble {
     fn get_type(&self) -> &TypeBase;
 }
 
+#[derive(Clone)]
 pub struct ExprBase {
     op: Token,
     type_: TypeBase,
@@ -50,15 +51,6 @@ impl ExprBase {
         ExprBase {
             op: tok,
             type_: p,
-        }
-    }
-}
-
-impl Clone for ExprBase {
-    fn clone(&self) -> Self {
-        ExprBase {
-            op: self.op.clone(),
-            type_: self.type_.clone(),
         }
     }
 }
@@ -152,6 +144,7 @@ impl ExprAble for Temp {
     }
 }
 
+#[derive(Clone)]
 pub struct Id {
     expr_base: ExprBase,
     offset: u32,
@@ -162,15 +155,6 @@ impl Id {
         Id {
             expr_base: ExprBase::new(Token::Word(Word::Word(id)), p),
             offset: b,
-        }
-    }
-}
-
-impl Clone for Id {
-    fn clone(&self) -> Self {
-        Id {
-            expr_base: self.expr_base.clone(),
-            offset: self.offset,
         }
     }
 }

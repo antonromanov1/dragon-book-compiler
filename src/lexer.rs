@@ -27,6 +27,7 @@ pub enum Tag {
     While,
 }
 
+#[derive(Clone)]
 pub struct TokenBase {
     pub tag: u32,
 }
@@ -39,6 +40,7 @@ impl TokenBase {
     }
 }
 
+#[derive(Clone)]
 pub struct WordBase {
     pub token: TokenBase,
     pub lexeme: String,
@@ -49,17 +51,6 @@ impl WordBase {
         WordBase {
             token: TokenBase::new(tag),
             lexeme: s,
-        }
-    }
-}
-
-impl Clone for WordBase {
-    fn clone(&self) -> Self {
-        WordBase {
-            token: TokenBase {
-                tag: self.token.tag,
-            },
-            lexeme: self.lexeme.clone(),
         }
     }
 }
@@ -114,6 +105,7 @@ pub fn word_minus() -> WordBase {
     WordBase::new("minus".to_string(), Tag::Minus as u32)
 }
 
+#[derive(Clone)]
 pub struct Num {
     token: TokenBase,
     pub value: u32,
@@ -130,6 +122,7 @@ impl Num {
     }
 }
 
+#[derive(Clone)]
 pub struct Real {
     token: TokenBase,
     pub value: f32,
@@ -146,6 +139,7 @@ impl Real {
     }
 }
 
+#[derive(Clone)]
 pub struct TypeBase {
     pub word: WordBase,
     width: u32,
@@ -232,29 +226,13 @@ impl TypeBase {
     }
 }
 
-impl Clone for TypeBase {
-    fn clone(&self) -> Self {
-        TypeBase {
-            word: self.word.clone(),
-            width: self.width,
-        }
-    }
-}
-
+#[derive(Clone)]
 pub enum Word {
     Word(WordBase),
     Type(TypeBase),
 }
 
-impl Clone for Word {
-    fn clone(&self) -> Self {
-        match &*self {
-            Word::Word(word) => Word::Word(word.clone()),
-            Word::Type(type_) => Word::Type(type_.clone()),
-        }
-    }
-}
-
+#[derive(Clone)]
 pub enum Token {
     Token(TokenBase),
     Word(Word),
@@ -295,45 +273,6 @@ impl Token {
             Token::Num(c) => format!("{}", c.value),
             Token::Real(d) => format!("{}", d.value),
             _ => panic!(),
-        }
-    }
-}
-
-impl Clone for Token {
-    fn clone(&self) -> Self {
-        match &*self {
-            Token::Token(tok) => {
-                Token::Token(TokenBase {
-                    tag: tok.tag,
-                })
-            },
-            Token::Word(word) => {
-                match word {
-                    Word::Word(word_base) => {
-                        Token::Word(Word::Word(word_base.clone()))
-                    },
-                    Word::Type(type_base) => {
-                        Token::Word(Word::Type(type_base.clone()))
-                    },
-                }
-            },
-            Token::Num(num) => {
-                Token::Num(Num {
-                    token: TokenBase {
-                        tag: num.token.tag,
-                    },
-                    value: num.value,
-                })
-            }
-            Token::Real(real) => {
-                Token::Real(Real {
-                    token: TokenBase {
-                        tag: real.token.tag,
-                    },
-                    value: real.value,
-                })
-            }
-            _ => panic!("token clone"),
         }
     }
 }
