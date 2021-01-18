@@ -1,6 +1,7 @@
 # What is it ?
 
-Izber is a compiler
+Izber is a compiler which is taken from book Compilers: Principles, Techniques, and Tools (Alfred Aho, Monica Lam,
+Ravi Sethi and Jeffrey Ullman) and rewritten from Java to Rust.
 
 # Iz.. what ?
 
@@ -13,7 +14,7 @@ Firstly you have to build it:
 cargo build
 ```
 
-Compiling source:
+And then run it:
 ```bash
-./target/debug/izber main.iz
+cargo run main.iz
 ```
