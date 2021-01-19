@@ -1,7 +1,7 @@
 # What is it ?
 
-Izber is a compiler which is taken from book Compilers: Principles, Techniques, and Tools (Alfred Aho, Monica Lam,
-Ravi Sethi and Jeffrey Ullman) and rewritten from Java to Rust.
+Izber is a compiler that works just like the compiler from chapter 2 of the dragon book (Compilers: Principles, Techniques,
+and Tools. Authors: Alfred Aho, Monica Lam, Ravi Sethi and Jeffrey Ullman). It is written in Rust.
 
 # Iz.. what ?
 
