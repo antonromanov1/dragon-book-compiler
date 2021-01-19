@@ -3,6 +3,18 @@ use std::cell::RefCell;
 
 use crate::lexer::*;
 
+macro_rules! op_reduce {
+    ($self: expr) => {
+        {
+            let x = $self.gen();
+            let t = Box::new(
+                      Temp::new((*$self.get_type()).clone(), $self.temp_count.clone()));
+            emit(format!("{} = {}", t.to_string(), x.to_string()));
+            t
+        }
+    }
+}
+
 struct Node {
     lexer_line: u32,
 }
@@ -188,7 +200,7 @@ impl ExprAble for Id {
 }
 
 struct OpBase {
-    expr_base: ExprBase, // TODO: refactor
+    expr_base: ExprBase,
     pub temp_count: Rc<RefCell<u8>>,
 }
 
@@ -203,11 +215,7 @@ impl OpBase {
 
 impl ExprAble for OpBase {
     fn reduce(&self) -> Box<dyn ExprAble> {
-        let x = self.gen();
-        let t = Box::new(
-                  Temp::new((*self.get_type()).clone(), self.temp_count.clone()));
-        emit(format!("{} = {}", t.to_string(), x.to_string()));
-        t
+        op_reduce!(self)
     }
 
     // Inherited:
@@ -238,7 +246,7 @@ pub struct Arith {
     expr1: Box<dyn ExprAble>,
     expr2: Box<dyn ExprAble>,
     line: u32,
-    count: Rc<RefCell<u8>>,
+    temp_count: Rc<RefCell<u8>>,
 }
 
 impl Arith {
@@ -259,7 +267,7 @@ impl Arith {
                     expr1: x1,
                     expr2: x2,
                     line: line,
-                    count: count.clone(),
+                    temp_count: count.clone(),
                 };
             },
             None => Arith::error(line, "type error"),
@@ -282,11 +290,7 @@ impl ExprAble for Arith {
     }
 
     fn reduce(&self) -> Box<dyn ExprAble> {
-        let x = self.gen();
-        let t = Box::new(
-                  Temp::new((*self.get_type()).clone(), self.count.clone()));
-        emit(format!("{} = {}", t.to_string(), x.to_string()));
-        t
+        op_reduce!(self)
     }
 
     // Explicitly inherited:
