@@ -489,6 +489,38 @@ impl ExprAble for And {
     get_type!{self, logic}
 }
 
+pub struct Not {
+    logic: Logical,
+}
+
+impl Not {
+    #[allow(dead_code)]
+    pub fn new(tok: Token, x2: Box<dyn ExprAble>, count: Rc<RefCell<u8>>, labels: Rc<RefCell<u32>>) -> Not {
+        // I use Box::new(Id::new()) as an unuseful thing cause Logical requires 2 pointers
+        // TODO: rewrite it
+
+        Not {
+            logic: Logical::new(tok, Box::new(Id::new(word_true(), type_int(), 0)), x2, count, labels),
+        }
+    }
+}
+
+impl ExprAble for Not {
+    fn jumping(&self, t: u32, f: u32) {
+        (*self.logic.expr2).jumping(f, t);
+    }
+
+    fn to_string(&self) -> String {
+        format!("{} {}", self.logic.expr_base.op.to_string(), self.logic.expr2.to_string())
+    }
+
+    // Explicitly inherited:
+    gen!{self, logic}
+    reduce!{self, logic}
+    emit_jumps!{self, logic}
+    get_type!{self, logic}
+}
+
 // Statements:
 
 pub trait StmtAble {
