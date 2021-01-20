@@ -3,18 +3,6 @@ use std::cell::RefCell;
 
 use crate::lexer::*;
 
-macro_rules! op_reduce {
-    ($self: expr) => {
-        {
-            let x = $self.gen();
-            let t = Box::new(
-                      Temp::new((*$self.get_type()).clone(), $self.temp_count.clone()));
-            emit(format!("{} = {}", t.to_string(), x.to_string()));
-            t
-        }
-    }
-}
-
 struct Node {
     lexer_line: u32,
 }
@@ -209,6 +197,18 @@ impl OpBase {
         OpBase {
             expr_base: ExprBase::new(tok, p),
             temp_count: count,
+        }
+    }
+}
+
+macro_rules! op_reduce {
+    ($self: expr) => {
+        {
+            let x = $self.gen();
+            let t = Box::new(
+                      Temp::new((*$self.get_type()).clone(), $self.temp_count.clone()));
+            emit(format!("{} = {}", t.to_string(), x.to_string()));
+            t
         }
     }
 }
