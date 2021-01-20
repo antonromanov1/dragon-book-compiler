@@ -90,6 +90,54 @@ impl ExprAble for ExprBase {
     }
 }
 
+macro_rules! gen {
+    ( $self:ident, $field:ident ) => {
+        fn gen(&$self) -> Box<dyn ExprAble> {
+            $self.$field.gen()
+        }
+    }
+}
+
+macro_rules! reduce {
+    ( $self:ident, $field:ident ) => {
+        fn reduce(&$self) -> Box<dyn ExprAble> {
+            $self.$field.gen()
+        }
+    }
+}
+
+macro_rules! jumping {
+    ( $self:ident, $field:ident ) => {
+        fn jumping(&$self, t: u32, f: u32) {
+            $self.$field.jumping(t, f);
+        }
+    }
+}
+
+macro_rules! emit_jumps {
+    ( $self:ident, $field:ident ) => {
+        fn emit_jumps(&$self, test: String, t: u32, f: u32) {
+            $self.$field.emit_jumps(test, t, f);
+        }
+    }
+}
+
+macro_rules! to_string {
+    ( $self:ident, $field:ident ) => {
+        fn to_string(&$self) -> String {
+            $self.$field.to_string()
+        }
+    }
+}
+
+macro_rules! get_type {
+    ( $self:ident, $field:ident ) => {
+        fn get_type(&$self) -> &TypeBase {
+            $self.$field.get_type()
+        }
+    }
+}
+
 struct Temp {
     expr_base: ExprBase,
     number: u8,
@@ -122,26 +170,11 @@ impl ExprAble for Temp {
     }
 
     // Explicitly inherited:
-
-    fn gen(&self) -> Box<dyn ExprAble> {
-        self.expr_base.gen()
-    }
-
-    fn reduce(&self) -> Box<dyn ExprAble> {
-        self.expr_base.reduce()
-    }
-
-    fn jumping(&self, t: u32, f: u32) {
-        self.expr_base.jumping(t, f);
-    }
-
-    fn emit_jumps(&self, test: String, t: u32, f: u32) {
-        self.expr_base.emit_jumps(test, t, f);
-    }
-
-    fn get_type(&self) -> &TypeBase {
-        self.expr_base.get_type()
-    }
+    gen!{self, expr_base}
+    reduce!{self, expr_base}
+    jumping!{self, expr_base}
+    emit_jumps!{self, expr_base}
+    get_type!{self, expr_base}
 }
 
 #[derive(Clone)]
@@ -161,30 +194,12 @@ impl Id {
 
 impl ExprAble for Id {
     // All explicitly inherited
-
-    fn gen(&self) -> Box<dyn ExprAble> {
-        self.expr_base.gen()
-    }
-
-    fn reduce(&self) -> Box<dyn ExprAble> {
-        self.expr_base.reduce()
-    }
-
-    fn jumping(&self, t: u32, f: u32) {
-        self.expr_base.jumping(t, f);
-    }
-
-    fn emit_jumps(&self, test: String, t: u32, f: u32) {
-        self.expr_base.emit_jumps(test, t, f);
-    }
-
-    fn to_string(&self) -> String {
-        self.expr_base.to_string()
-    }
-
-    fn get_type(&self) -> &TypeBase {
-        self.expr_base.get_type()
-    }
+    gen!{self, expr_base}
+    reduce!{self, expr_base}
+    jumping!{self, expr_base}
+    emit_jumps!{self, expr_base}
+    to_string!{self, expr_base}
+    get_type!{self, expr_base}
 }
 
 struct OpBase {
@@ -202,7 +217,7 @@ impl OpBase {
 }
 
 macro_rules! op_reduce {
-    ($self: expr) => {
+    ( $self:expr ) => {
         {
             let x = $self.gen();
             let t = Box::new(
@@ -219,26 +234,11 @@ impl ExprAble for OpBase {
     }
 
     // Inherited:
-
-    fn gen(&self) -> Box<dyn ExprAble> {
-        self.expr_base.gen()
-    }
-
-    fn emit_jumps(&self, test: String, t: u32, f: u32) {
-        self.expr_base.emit_jumps(test, t, f);
-    }
-
-    fn to_string(&self) -> String {
-        self.expr_base.to_string()
-    }
-
-    fn jumping(&self, t: u32, f: u32) {
-        self.expr_base.jumping(t, f);
-    }
-
-    fn get_type(&self) -> &TypeBase {
-        self.expr_base.get_type()
-    }
+    gen!{self, expr_base}
+    jumping!{self, expr_base}
+    emit_jumps!{self, expr_base}
+    to_string!{self, expr_base}
+    get_type!{self, expr_base}
 }
 
 pub struct Arith {
@@ -294,18 +294,9 @@ impl ExprAble for Arith {
     }
 
     // Explicitly inherited:
-
-    fn jumping(&self, t: u32, f: u32) {
-        self.op_base.jumping(t, f);
-    }
-
-    fn emit_jumps(&self, test: String, t: u32, f: u32) {
-        self.op_base.emit_jumps(test, t, f);
-    }
-
-    fn get_type(&self) -> &TypeBase {
-        self.op_base.get_type()
-    }
+    jumping!{self, op_base}
+    emit_jumps!{self, op_base}
+    get_type!{self, op_base}
 }
 
 pub struct Unary {
@@ -339,21 +330,10 @@ impl ExprAble for Unary {
     }
 
     // Explicitly inherited
-    fn reduce(&self) -> Box<dyn ExprAble> {
-        self.op_base.reduce()
-    }
-
-    fn jumping(&self, t: u32, f: u32) {
-        self.op_base.jumping(t, f);
-    }
-
-    fn emit_jumps(&self, test: String, t: u32, f: u32) {
-        self.op_base.emit_jumps(test, t, f);
-    }
-
-    fn get_type(&self) -> &TypeBase {
-        self.op_base.get_type()
-    }
+    reduce!{self, op_base}
+    jumping!{self, op_base}
+    emit_jumps!{self, op_base}
+    get_type!{self, op_base}
 }
 
 pub struct Constant {
@@ -403,26 +383,11 @@ impl ExprAble for Constant {
     }
 
     // Explicitly inherited:
-
-    fn gen(&self) -> Box<dyn ExprAble> {
-        self.expr_base.gen()
-    }
-
-    fn reduce(&self) -> Box<dyn ExprAble> {
-        self.expr_base.reduce()
-    }
-
-    fn emit_jumps(&self, test: String, t: u32, f: u32) {
-        self.expr_base.emit_jumps(test, t, f);
-    }
-
-    fn to_string(&self) -> String {
-        self.expr_base.to_string()
-    }
-
-    fn get_type(&self) -> &TypeBase {
-        self.expr_base.get_type()
-    }
+    gen!{self, expr_base}
+    reduce!{self, expr_base}
+    emit_jumps!{self, expr_base}
+    to_string!{self, expr_base}
+    get_type!{self, expr_base}
 }
 
 pub fn new_label(labels: Rc<RefCell<u32>>) -> u32 {
@@ -480,22 +445,10 @@ impl ExprAble for Logical {
     }
 
     // Explicitly inherited:
-
-    fn reduce(&self) -> Box<dyn ExprAble> {
-        self.expr_base.reduce()
-    }
-
-    fn jumping(&self, t: u32, f: u32) {
-        self.expr_base.jumping(t, f);
-    }
-
-    fn emit_jumps(&self, test: String, t: u32, f: u32) {
-        self.expr_base.emit_jumps(test, t, f);
-    }
-
-    fn get_type(&self) -> &TypeBase {
-        self.expr_base.get_type()
-    }
+    reduce!{self, expr_base}
+    jumping!{self, expr_base}
+    emit_jumps!{self, expr_base}
+    get_type!{self, expr_base}
 }
 
 pub struct And {
@@ -529,26 +482,11 @@ impl ExprAble for And {
     }
 
     // Explicitly inherited:
-
-    fn gen(&self) -> Box<dyn ExprAble> {
-        self.logic.gen()
-    }
-
-    fn reduce(&self) -> Box<dyn ExprAble> {
-        self.logic.reduce()
-    }
-
-    fn emit_jumps(&self, test: String, t: u32, f: u32) {
-        self.logic.emit_jumps(test, t, f);
-    }
-
-    fn to_string(&self) -> String {
-        self.logic.to_string()
-    }
-
-    fn get_type(&self) -> &TypeBase {
-        self.logic.get_type()
-    }
+    gen!{self, logic}
+    reduce!{self, logic}
+    emit_jumps!{self, logic}
+    to_string!{self, logic}
+    get_type!{self, logic}
 }
 
 // Statements:
