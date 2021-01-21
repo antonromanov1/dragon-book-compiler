@@ -489,6 +489,44 @@ impl ExprAble for And {
     get_type!{self, logic}
 }
 
+pub struct Or {
+    logic: Logical,
+}
+
+impl Or {
+    #[allow(dead_code)]
+    pub fn new(tok: Token, x1: Box<dyn ExprAble>, x2: Box<dyn ExprAble>, count: Rc<RefCell<u8>>,
+               labels: Rc<RefCell<u32>>) -> Or {
+        Or {
+            logic: Logical::new(tok, x1, x2, count, labels),
+        }
+    }
+}
+
+impl ExprAble for Or {
+    fn jumping(&self, t: u32, f: u32) {
+        let label: u32;
+        if t != 0 {
+            label = t;
+        }
+        else {
+            label = new_label(self.logic.labels.clone());
+        }
+        self.logic.expr1.jumping(label, 0);
+        self.logic.expr2.jumping(t, f);
+        if t == 0 {
+            emit_label(label);
+        }
+    }
+
+    // Explicitly inherited:
+    gen!{self, logic}
+    reduce!{self, logic}
+    emit_jumps!{self, logic}
+    to_string!{self, logic}
+    get_type!{self, logic}
+}
+
 pub struct Not {
     logic: Logical,
 }
