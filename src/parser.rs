@@ -55,7 +55,7 @@ impl Parser {
                     self.move_();
                 }
                 else {
-                    self.error("syntax error");
+                    self.error(&self.look.to_string());
                 }
             },
             None => panic!("End of file reached"),
@@ -108,7 +108,7 @@ impl Parser {
                 match word {
                     Word::Type(t) => t,
                     Word::Word(word_base) => {
-                        panic!("Expected type, got {}", word_base.lexeme.clone());
+                        self.error(&word_base.lexeme);
                     },
                 }
             },
