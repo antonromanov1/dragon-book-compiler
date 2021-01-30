@@ -141,9 +141,9 @@ impl Parser {
             }
             Some(Box::new(Break::new(self.enclosing.take())))
         }
-        /*
-        else if self.look.get_tag() == '{' as u32
-        */
+        else if self.look.get_tag().unwrap() == '{' as u32 {
+            self.block()
+        }
         else {
             Some(self.assign())
         }
