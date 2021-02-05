@@ -161,10 +161,10 @@ impl Parser {
                     Word::Word(base) => {
                         base
                     }
-                    _ => panic!("Unreachable code"),
+                    _ => unreachable!(),
                 }
             },
-            _ => panic!("Unreachable code"),
+            _ => unreachable!(),
         };
         let id = (*self.top.as_ref().unwrap()).get(&w);
         match id {
@@ -282,10 +282,10 @@ impl Parser {
                                 Word::Word(w) => {
                                     id = (*self.top.as_ref().unwrap()).get(&w);
                                 },
-                                _ => panic!("Unreachable"),
+                                _ => unreachable!(),
                             }
                         },
-                        _ => panic!("Unreachable"),
+                        _ => unreachable!(),
                     }
 
                     match id {

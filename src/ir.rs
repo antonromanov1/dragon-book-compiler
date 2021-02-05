@@ -3,6 +3,12 @@ use std::cell::RefCell;
 
 use crate::lexer::*;
 
+macro_rules! unreachable {
+    () => {
+        panic!("Unreachable code");
+    }
+}
+
 struct Node {
     lexer_line: u32,
 }
@@ -642,7 +648,7 @@ impl StmtAble for Seq {
     }
 
     fn get_after(&self) -> u32 {
-        panic!("Unreachable code");
+        unreachable!();
     }
 }
 
