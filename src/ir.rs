@@ -1,12 +1,12 @@
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
 
 use crate::lexer::*;
 
 macro_rules! unreachable {
     () => {
         panic!("Unreachable code");
-    }
+    };
 }
 
 struct Node {
@@ -15,9 +15,7 @@ struct Node {
 
 impl Node {
     fn new(line: u32) -> Node {
-        Node {
-            lexer_line: line,
-        }
+        Node { lexer_line: line }
     }
 
     fn error(&self, s: &str) -> ! {
@@ -54,10 +52,7 @@ pub struct ExprBase {
 
 impl ExprBase {
     pub fn new(tok: Token, p: TypeBase) -> ExprBase {
-        ExprBase {
-            op: tok,
-            type_: p,
-        }
+        ExprBase { op: tok, type_: p }
     }
 }
 
@@ -74,11 +69,9 @@ impl ExprAble for ExprBase {
         if t != 0 && f != 0 {
             emit(format!("if {} goto L{}", test, t));
             emit(format!("goto L{}", f));
-        }
-        else if t != 0 {
+        } else if t != 0 {
             emit(format!("if {} goto L{}", test, t));
-        }
-        else if f != 0 {
+        } else if f != 0 {
             emit(format!("iffalse {} goto L{}", test, f));
         }
     }
@@ -176,11 +169,11 @@ impl ExprAble for Temp {
     }
 
     // Explicitly inherited:
-    gen!{self, expr_base}
-    reduce!{self, expr_base}
-    jumping!{self, expr_base}
-    emit_jumps!{self, expr_base}
-    get_type!{self, expr_base}
+    gen! {self, expr_base}
+    reduce! {self, expr_base}
+    jumping! {self, expr_base}
+    emit_jumps! {self, expr_base}
+    get_type! {self, expr_base}
 }
 
 #[derive(Clone)]
@@ -200,12 +193,12 @@ impl Id {
 
 impl ExprAble for Id {
     // All explicitly inherited
-    gen!{self, expr_base}
-    reduce!{self, expr_base}
-    jumping!{self, expr_base}
-    emit_jumps!{self, expr_base}
-    to_string!{self, expr_base}
-    get_type!{self, expr_base}
+    gen! {self, expr_base}
+    reduce! {self, expr_base}
+    jumping! {self, expr_base}
+    emit_jumps! {self, expr_base}
+    to_string! {self, expr_base}
+    get_type! {self, expr_base}
 }
 
 struct OpBase {
@@ -223,15 +216,15 @@ impl OpBase {
 }
 
 macro_rules! op_reduce {
-    ( $self:expr ) => {
-        {
-            let x = $self.gen();
-            let t = Box::new(
-                      Temp::new((*$self.get_type()).clone(), $self.temp_count.clone()));
-            emit(format!("{} = {}", t.to_string(), x.to_string()));
-            t
-        }
-    }
+    ( $self:expr ) => {{
+        let x = $self.gen();
+        let t = Box::new(Temp::new(
+            (*$self.get_type()).clone(),
+            $self.temp_count.clone(),
+        ));
+        emit(format!("{} = {}", t.to_string(), x.to_string()));
+        t
+    }};
 }
 
 impl ExprAble for OpBase {
@@ -240,11 +233,11 @@ impl ExprAble for OpBase {
     }
 
     // Inherited:
-    gen!{self, expr_base}
-    jumping!{self, expr_base}
-    emit_jumps!{self, expr_base}
-    to_string!{self, expr_base}
-    get_type!{self, expr_base}
+    gen! {self, expr_base}
+    jumping! {self, expr_base}
+    emit_jumps! {self, expr_base}
+    to_string! {self, expr_base}
+    get_type! {self, expr_base}
 }
 
 pub struct Arith {
@@ -261,9 +254,13 @@ impl Arith {
         node.error(s);
     }
 
-    pub fn new(tok: Token, x1: Box<dyn ExprAble>, x2: Box<dyn ExprAble>, line: u32,
-               count: Rc<RefCell<u8>>) -> Arith {
-
+    pub fn new(
+        tok: Token,
+        x1: Box<dyn ExprAble>,
+        x2: Box<dyn ExprAble>,
+        line: u32,
+        count: Rc<RefCell<u8>>,
+    ) -> Arith {
         let type1 = (*x1).get_type();
         let type2 = (*x2).get_type();
         match TypeBase::max(type1, type2) {
@@ -275,7 +272,7 @@ impl Arith {
                     line: line,
                     temp_count: count.clone(),
                 };
-            },
+            }
             None => Arith::error(line, "type error"),
         };
     }
@@ -283,12 +280,18 @@ impl Arith {
 
 impl ExprAble for Arith {
     fn gen(&self) -> Box<dyn ExprAble> {
-        Box::new(Arith::new(self.op_base.expr_base.op.clone(), self.expr1.reduce(),
-                            self.expr2.reduce(), self.line, self.op_base.temp_count.clone()))
+        Box::new(Arith::new(
+            self.op_base.expr_base.op.clone(),
+            self.expr1.reduce(),
+            self.expr2.reduce(),
+            self.line,
+            self.op_base.temp_count.clone(),
+        ))
     }
 
     fn to_string(&self) -> String {
-        format!("{} {} {}",
+        format!(
+            "{} {} {}",
             (*self.expr1).to_string(),
             self.op_base.expr_base.op.to_string(),
             (*self.expr2).to_string()
@@ -300,9 +303,9 @@ impl ExprAble for Arith {
     }
 
     // Explicitly inherited:
-    jumping!{self, op_base}
-    emit_jumps!{self, op_base}
-    get_type!{self, op_base}
+    jumping! {self, op_base}
+    emit_jumps! {self, op_base}
+    get_type! {self, op_base}
 }
 
 pub struct Unary {
@@ -326,9 +329,11 @@ impl Unary {
 
 impl ExprAble for Unary {
     fn gen(&self) -> Box<dyn ExprAble> {
-        Box::new(
-            Unary::new(self.op_base.expr_base.op.clone(), (*self.expr).reduce(),
-                       self.op_base.temp_count.clone()))
+        Box::new(Unary::new(
+            self.op_base.expr_base.op.clone(),
+            (*self.expr).reduce(),
+            self.op_base.temp_count.clone(),
+        ))
     }
 
     fn to_string(&self) -> String {
@@ -336,10 +341,10 @@ impl ExprAble for Unary {
     }
 
     // Explicitly inherited
-    reduce!{self, op_base}
-    jumping!{self, op_base}
-    emit_jumps!{self, op_base}
-    get_type!{self, op_base}
+    reduce! {self, op_base}
+    jumping! {self, op_base}
+    emit_jumps! {self, op_base}
+    get_type! {self, op_base}
 }
 
 pub struct Constant {
@@ -371,29 +376,26 @@ pub fn constant_false() -> Constant {
 impl ExprAble for Constant {
     fn jumping(&self, t: u32, f: u32) {
         match &self.expr_base.op {
-            Token::Word(word) => {
-                match word {
-                    Word::Word(base) => {
-                        if (base.lexeme == "true".to_string()) && (t != 0) {
-                            emit(format!("goto L{}", t));
-                        }
-                        else if (base.lexeme == "false".to_string()) && (f != 0) {
-                            emit(format!("goto L{}", f));
-                        }
+            Token::Word(word) => match word {
+                Word::Word(base) => {
+                    if (base.lexeme == "true".to_string()) && (t != 0) {
+                        emit(format!("goto L{}", t));
+                    } else if (base.lexeme == "false".to_string()) && (f != 0) {
+                        emit(format!("goto L{}", f));
                     }
-                    _ => {}
                 }
+                _ => {}
             },
             _ => {}
         }
     }
 
     // Explicitly inherited:
-    gen!{self, expr_base}
-    reduce!{self, expr_base}
-    emit_jumps!{self, expr_base}
-    to_string!{self, expr_base}
-    get_type!{self, expr_base}
+    gen! {self, expr_base}
+    reduce! {self, expr_base}
+    emit_jumps! {self, expr_base}
+    to_string! {self, expr_base}
+    get_type! {self, expr_base}
 }
 
 pub fn new_label(labels: Rc<RefCell<u32>>) -> u32 {
@@ -411,12 +413,14 @@ struct Logical {
 
 impl Logical {
     #[allow(dead_code)]
-    fn new(tok: Token, x1: Box<dyn ExprAble>, x2: Box<dyn ExprAble>,
-               count: Rc<RefCell<u8>>, labels: Rc<RefCell<u32>>) -> Logical {
-
-        if (*(*x1).get_type()) == type_bool() &&
-           (*(*x2).get_type()) == type_bool() {
-
+    fn new(
+        tok: Token,
+        x1: Box<dyn ExprAble>,
+        x2: Box<dyn ExprAble>,
+        count: Rc<RefCell<u8>>,
+        labels: Rc<RefCell<u32>>,
+    ) -> Logical {
+        if (*(*x1).get_type()) == type_bool() && (*(*x2).get_type()) == type_bool() {
             Logical {
                 expr_base: ExprBase::new(tok, type_bool()),
                 expr1: x1,
@@ -424,8 +428,7 @@ impl Logical {
                 temp_count: count,
                 labels: labels,
             }
-        }
-        else {
+        } else {
             panic!("type error"); // TODO: should print line
         }
     }
@@ -446,15 +449,19 @@ impl ExprAble for Logical {
     }
 
     fn to_string(&self) -> String {
-        format!("{} {} {}", (*self.expr1).to_string(), self.expr_base.op.to_string(),
-                            (*self.expr2).to_string())
+        format!(
+            "{} {} {}",
+            (*self.expr1).to_string(),
+            self.expr_base.op.to_string(),
+            (*self.expr2).to_string()
+        )
     }
 
     // Explicitly inherited:
-    reduce!{self, expr_base}
-    jumping!{self, expr_base}
-    emit_jumps!{self, expr_base}
-    get_type!{self, expr_base}
+    reduce! {self, expr_base}
+    jumping! {self, expr_base}
+    emit_jumps! {self, expr_base}
+    get_type! {self, expr_base}
 }
 
 pub struct And {
@@ -463,8 +470,13 @@ pub struct And {
 
 impl And {
     #[allow(dead_code)]
-    pub fn new(tok: Token, x1: Box<dyn ExprAble>, x2: Box<dyn ExprAble>, count: Rc<RefCell<u8>>,
-               labels: Rc<RefCell<u32>>) -> And {
+    pub fn new(
+        tok: Token,
+        x1: Box<dyn ExprAble>,
+        x2: Box<dyn ExprAble>,
+        count: Rc<RefCell<u8>>,
+        labels: Rc<RefCell<u32>>,
+    ) -> And {
         And {
             logic: Logical::new(tok, x1, x2, count, labels),
         }
@@ -476,8 +488,7 @@ impl ExprAble for And {
         let label: u32;
         if f != 0 {
             label = f;
-        }
-        else {
+        } else {
             label = new_label(self.logic.labels.clone());
         }
         self.logic.expr1.jumping(0, label);
@@ -488,11 +499,11 @@ impl ExprAble for And {
     }
 
     // Explicitly inherited:
-    gen!{self, logic}
-    reduce!{self, logic}
-    emit_jumps!{self, logic}
-    to_string!{self, logic}
-    get_type!{self, logic}
+    gen! {self, logic}
+    reduce! {self, logic}
+    emit_jumps! {self, logic}
+    to_string! {self, logic}
+    get_type! {self, logic}
 }
 
 pub struct Or {
@@ -501,8 +512,13 @@ pub struct Or {
 
 impl Or {
     #[allow(dead_code)]
-    pub fn new(tok: Token, x1: Box<dyn ExprAble>, x2: Box<dyn ExprAble>, count: Rc<RefCell<u8>>,
-               labels: Rc<RefCell<u32>>) -> Or {
+    pub fn new(
+        tok: Token,
+        x1: Box<dyn ExprAble>,
+        x2: Box<dyn ExprAble>,
+        count: Rc<RefCell<u8>>,
+        labels: Rc<RefCell<u32>>,
+    ) -> Or {
         Or {
             logic: Logical::new(tok, x1, x2, count, labels),
         }
@@ -514,8 +530,7 @@ impl ExprAble for Or {
         let label: u32;
         if t != 0 {
             label = t;
-        }
-        else {
+        } else {
             label = new_label(self.logic.labels.clone());
         }
         self.logic.expr1.jumping(label, 0);
@@ -526,11 +541,11 @@ impl ExprAble for Or {
     }
 
     // Explicitly inherited:
-    gen!{self, logic}
-    reduce!{self, logic}
-    emit_jumps!{self, logic}
-    to_string!{self, logic}
-    get_type!{self, logic}
+    gen! {self, logic}
+    reduce! {self, logic}
+    emit_jumps! {self, logic}
+    to_string! {self, logic}
+    get_type! {self, logic}
 }
 
 pub struct Not {
@@ -538,12 +553,23 @@ pub struct Not {
 }
 
 impl Not {
-    pub fn new(tok: Token, x2: Box<dyn ExprAble>, count: Rc<RefCell<u8>>, labels: Rc<RefCell<u32>>) -> Not {
+    pub fn new(
+        tok: Token,
+        x2: Box<dyn ExprAble>,
+        count: Rc<RefCell<u8>>,
+        labels: Rc<RefCell<u32>>,
+    ) -> Not {
         // I use Box::new(Id::new()) as an unuseful thing cause Logical requires 2 pointers
         // TODO: rewrite it
 
         Not {
-            logic: Logical::new(tok, Box::new(Id::new(word_true(), type_int(), 0)), x2, count, labels),
+            logic: Logical::new(
+                tok,
+                Box::new(Id::new(word_true(), type_int(), 0)),
+                x2,
+                count,
+                labels,
+            ),
         }
     }
 }
@@ -554,14 +580,18 @@ impl ExprAble for Not {
     }
 
     fn to_string(&self) -> String {
-        format!("{} {}", self.logic.expr_base.op.to_string(), self.logic.expr2.to_string())
+        format!(
+            "{} {}",
+            self.logic.expr_base.op.to_string(),
+            self.logic.expr2.to_string()
+        )
     }
 
     // Explicitly inherited:
-    gen!{self, logic}
-    reduce!{self, logic}
-    emit_jumps!{self, logic}
-    get_type!{self, logic}
+    gen! {self, logic}
+    reduce! {self, logic}
+    emit_jumps! {self, logic}
+    get_type! {self, logic}
 }
 
 // Statements:
@@ -620,8 +650,11 @@ pub struct Seq {
 }
 
 impl Seq {
-    pub fn new(s1: Option<Box<dyn StmtAble>>, s2: Option<Box<dyn StmtAble>>,
-               labels: Rc<RefCell<u32>>) -> Seq {
+    pub fn new(
+        s1: Option<Box<dyn StmtAble>>,
+        s2: Option<Box<dyn StmtAble>>,
+        labels: Rc<RefCell<u32>>,
+    ) -> Seq {
         Seq {
             stmt1: s1,
             stmt2: s2,
@@ -634,11 +667,9 @@ impl StmtAble for Seq {
     fn gen(&self, b: u32, a: u32) {
         if (*(*self.stmt1.as_ref().unwrap())).is_null() {
             (*self.stmt2.as_ref().unwrap()).gen(b, a);
-        }
-        else if (*(*self.stmt2.as_ref().unwrap())).is_null() {
+        } else if (*(*self.stmt2.as_ref().unwrap())).is_null() {
             (*self.stmt1.as_ref().unwrap()).gen(b, a);
-        }
-        else {
+        } else {
             let label = new_label(self.labels.clone());
             (*self.stmt1.as_ref().unwrap()).gen(b, label);
             emit_label(label);
@@ -661,21 +692,22 @@ impl Set {
         let p1 = (*i).get_type();
         let p2 = (*x).get_type();
 
-        if numeric(p1) && numeric(p2) {}
-        else if *p1 == type_bool() && *p2 == type_bool() {}
-        else {
+        if numeric(p1) && numeric(p2) {
+        } else if *p1 == type_bool() && *p2 == type_bool() {
+        } else {
             panic!("type error");
         }
 
-        Set {
-            id: i,
-            expr: x,
-        }
+        Set { id: i, expr: x }
     }
 }
 
 impl StmtAble for Set {
     fn gen(&self, _b: u32, _a: u32) {
-        emit(format!("{} = {}", (*self.id).to_string(), (*(*self.expr).gen()).to_string()));
+        emit(format!(
+            "{} = {}",
+            (*self.id).to_string(),
+            (*(*self.expr).gen()).to_string()
+        ));
     }
 }

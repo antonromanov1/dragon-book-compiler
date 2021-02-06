@@ -1,7 +1,7 @@
-use std::io::BufReader;
-use std::fs::File;
-use std::io::Read;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::BufReader;
+use std::io::Read;
 
 /// This enumeration represents token types except for symbols such {, }, etc.
 pub enum Tag {
@@ -34,9 +34,7 @@ pub struct TokenBase {
 
 impl TokenBase {
     fn new(c: u32) -> TokenBase {
-        TokenBase {
-            tag: c,
-        }
+        TokenBase { tag: c }
     }
 }
 
@@ -190,8 +188,7 @@ pub fn type_bool() -> TypeBase {
 pub fn numeric(p: &TypeBase) -> bool {
     if *p == type_int() || *p == type_float() {
         true
-    }
-    else {
+    } else {
         false
     }
 }
@@ -211,16 +208,13 @@ impl TypeBase {
     }
 
     pub fn max(p1: &TypeBase, p2: &TypeBase) -> Option<TypeBase> {
-        if ! numeric(p1) || ! numeric(p2) {
+        if !numeric(p1) || !numeric(p2) {
             None
-        }
-        else if *p1 == type_float() || *p2 == type_float() {
+        } else if *p1 == type_float() || *p2 == type_float() {
             Some(type_float())
-        }
-        else if *p1 == type_int() || *p2 == type_int() {
+        } else if *p1 == type_int() || *p2 == type_int() {
             Some(type_int())
-        }
-        else {
+        } else {
             Some(type_char())
         }
     }
@@ -245,15 +239,13 @@ impl Token {
     pub fn get_tag(&self) -> Option<u32> {
         match &*self {
             Token::Token(a) => Some(a.tag),
-            Token::Word(b) => {
-                match b {
-                    Word::Word(x) => Some(x.token.tag),
-                    Word::Type(y) => Some(y.word.token.tag),
-                }
-            } // TODO: find out why comma is not here
+            Token::Word(b) => match b {
+                Word::Word(x) => Some(x.token.tag),
+                Word::Type(y) => Some(y.word.token.tag),
+            }, // TODO: find out why comma is not here
             Token::Num(c) => Some(c.token.tag),
             Token::Real(d) => Some(d.token.tag),
-            Token::Eof => None
+            Token::Eof => None,
         }
     }
 
@@ -263,12 +255,10 @@ impl Token {
                 let mut s = String::new();
                 s.push(std::char::from_u32(a.tag).unwrap());
                 s
-            },
-            Token::Word(b) => {
-                match b {
-                    Word::Word(x) => x.lexeme.clone(),
-                    Word::Type(y) => y.word.lexeme.clone(),
-                }
+            }
+            Token::Word(b) => match b {
+                Word::Word(x) => x.lexeme.clone(),
+                Word::Type(y) => y.word.lexeme.clone(),
             },
             Token::Num(c) => format!("{}", c.value),
             Token::Real(d) => format!("{}", d.value),
@@ -283,21 +273,24 @@ pub struct Lexer {
     // line: String,
     peek: char,
     eof: bool,
-    words: HashMap<String, Word>
+    words: HashMap<String, Word>,
 }
 
 impl Lexer {
     fn reserve(&mut self, w: Word) {
         match w {
-            Word::Word(word_base) => self.words.insert(word_base.lexeme.clone(), Word::Word(word_base)),
-            Word::Type(type_base) => self.words.insert(type_base.word.lexeme.clone(), Word::Type(type_base)),
+            Word::Word(word_base) => self
+                .words
+                .insert(word_base.lexeme.clone(), Word::Word(word_base)),
+            Word::Type(type_base) => self
+                .words
+                .insert(type_base.word.lexeme.clone(), Word::Type(type_base)),
         };
     }
 
     pub fn new(file_name: &str) -> Lexer {
         let mut lex = Lexer {
-            buf_reader: BufReader::new(File::open(file_name).
-                                                    expect("open failed")),
+            buf_reader: BufReader::new(File::open(file_name).expect("open failed")),
             line_num: 1,
             // line: String::new(),
             peek: ' ',
@@ -305,11 +298,20 @@ impl Lexer {
             words: HashMap::new(),
         };
 
-        lex.reserve(Word::Word(WordBase::new("if".to_string(),    Tag::If as u32)));
-        lex.reserve(Word::Word(WordBase::new("else".to_string(),  Tag::Else as u32)));
-        lex.reserve(Word::Word(WordBase::new("while".to_string(), Tag::While as u32)));
-        lex.reserve(Word::Word(WordBase::new("do".to_string(),    Tag::Do as u32)));
-        lex.reserve(Word::Word(WordBase::new("break".to_string(), Tag::Break as u32)));
+        lex.reserve(Word::Word(WordBase::new("if".to_string(), Tag::If as u32)));
+        lex.reserve(Word::Word(WordBase::new(
+            "else".to_string(),
+            Tag::Else as u32,
+        )));
+        lex.reserve(Word::Word(WordBase::new(
+            "while".to_string(),
+            Tag::While as u32,
+        )));
+        lex.reserve(Word::Word(WordBase::new("do".to_string(), Tag::Do as u32)));
+        lex.reserve(Word::Word(WordBase::new(
+            "break".to_string(),
+            Tag::Break as u32,
+        )));
 
         lex.reserve(Word::Word(word_true()));
         lex.reserve(Word::Word(word_false()));
@@ -328,8 +330,7 @@ impl Lexer {
             Ok(x) => {
                 if x != 0 {
                     self.peek = buffer[0] as char;
-                }
-                else {
+                } else {
                     self.eof = true;
                 }
             }
@@ -350,11 +351,9 @@ impl Lexer {
         loop {
             if self.peek == ' ' || self.peek == '\t' {
                 ()
-            }
-            else if self.peek == '\n' {
+            } else if self.peek == '\n' {
                 self.line_num = self.line_num + 1;
-            }
-            else {
+            } else {
                 break;
             }
 
@@ -366,24 +365,27 @@ impl Lexer {
         }
 
         match self.peek {
-            '&' => if self.readch('&') {
-                return Token::Word(Word::Word(word_and()))
+            '&' => {
+                if self.readch('&') {
+                    return Token::Word(Word::Word(word_and()));
+                } else {
+                    return Token::Token(TokenBase::new('&' as u32));
+                }
             }
-            else {
-                return Token::Token(TokenBase::new('&' as u32))
-            },
-            '|' => if self.readch('|') {
-                return Token::Word(Word::Word(word_or()))
+            '|' => {
+                if self.readch('|') {
+                    return Token::Word(Word::Word(word_or()));
+                } else {
+                    return Token::Token(TokenBase::new('|' as u32));
+                }
             }
-            else {
-                return Token::Token(TokenBase::new('|' as u32))
-            },
-            '=' => if self.readch('=') {
-                return Token::Word(Word::Word(word_eq()))
+            '=' => {
+                if self.readch('=') {
+                    return Token::Word(Word::Word(word_eq()));
+                } else {
+                    return Token::Token(TokenBase::new('=' as u32));
+                }
             }
-            else {
-                return Token::Token(TokenBase::new('=' as u32))
-            },
             _ => (),
         }
 
@@ -393,24 +395,24 @@ impl Lexer {
             loop {
                 v = 10 * v + self.peek.to_digit(10).unwrap();
                 self.read_char();
-                if ! self.peek.is_digit(10) {
+                if !self.peek.is_digit(10) {
                     break;
                 }
             }
             if self.peek != '.' {
-                return Token::Num(Num::new(v))
+                return Token::Num(Num::new(v));
             }
             let mut x = v as f32;
             let mut d = 10 as f32;
             loop {
                 self.read_char();
-                if ! self.peek.is_digit(10) {
+                if !self.peek.is_digit(10) {
                     break;
                 }
                 x = x + self.peek.to_digit(10).unwrap() as f32 / d;
                 d = d * 10 as f32;
             }
-            return Token::Real(Real::new(x))
+            return Token::Real(Real::new(x));
         }
 
         // Word handle
@@ -444,7 +446,7 @@ impl Lexer {
                         lexeme: s.clone(),
                     };
                     self.words.insert(s, Word::Word(w.clone()));
-                    return Token::Word(Word::Word(w))
+                    return Token::Word(Word::Word(w));
                 }
             }
         }

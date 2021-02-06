@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use crate::lexer::*;
 use crate::ir::*;
+use crate::lexer::*;
 
 pub struct Env {
     table: HashMap<WordBase, Id>,
@@ -24,33 +24,29 @@ impl Env {
         match self.table.get(w) {
             Some(id) => {
                 return Some(id.clone());
-            },
-            None => {},
+            }
+            None => {}
         };
 
         let mut e = &(self.prev);
         match e {
-            Some(ptr) => {
-
-                loop {
-                    match (*ptr).table.get(w) {
-                        Some(id) => {
-                            return Some(id.clone());
-                        },
-                        None => {
-                            e = &(e.as_ref().unwrap().prev);
-                            match e {
-                                Some(_a) => continue,
-                                None => break,
-                            }
-                        },
-                    };
-                }
-
+            Some(ptr) => loop {
+                match (*ptr).table.get(w) {
+                    Some(id) => {
+                        return Some(id.clone());
+                    }
+                    None => {
+                        e = &(e.as_ref().unwrap().prev);
+                        match e {
+                            Some(_a) => continue,
+                            None => break,
+                        }
+                    }
+                };
             },
             None => {
                 return None;
-            },
+            }
         };
         None
     }
