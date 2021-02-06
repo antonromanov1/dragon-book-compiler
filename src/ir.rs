@@ -538,7 +538,6 @@ pub struct Not {
 }
 
 impl Not {
-    #[allow(dead_code)]
     pub fn new(tok: Token, x2: Box<dyn ExprAble>, count: Rc<RefCell<u8>>, labels: Rc<RefCell<u32>>) -> Not {
         // I use Box::new(Id::new()) as an unuseful thing cause Logical requires 2 pointers
         // TODO: rewrite it

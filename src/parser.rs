@@ -222,29 +222,22 @@ impl Parser {
     fn unary(&mut self) -> Box<dyn ExprAble> {
         if self.look.get_tag().unwrap() == '-' as u32 {
             self.move_();
-            return Box::new(Unary::new(Token::Word(Word::Word(word_minus())), self.unary(),
-                                       self.temp_count.clone()));
+            Box::new(Unary::new(Token::Word(Word::Word(word_minus())), self.unary(),
+                                       self.temp_count.clone()))
+        }
+        else if self.look.get_tag().unwrap() == '!' as u32 {
+            let tok = self.look.clone();
+            self.move_();
+            Box::new(Not::new(tok, self.unary(), self.temp_count.clone(), self.labels.clone()))
         }
         else {
-            return self.factor();
+            self.factor()
         }
     }
 
     fn factor(&mut self) -> Box<dyn ExprAble> {
         match self.look.get_tag() {
             Some(tag) => {
-                /*
-                if tag == '(' as u32 {
-                    self.move_();
-                    let x = self.bool_();
-                    self.match_(')');
-                    return x;
-                }
-                else if tag == Tag::Num as u32 {
-                ...
-                }
-                */
-
                 if tag == '(' as u32 {
                     self.move_();
                     let x = self.bool_();
