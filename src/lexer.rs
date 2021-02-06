@@ -147,7 +147,7 @@ pub struct TypeBase {
 
 impl PartialEq for TypeBase {
     fn eq(&self, other: &Self) -> bool {
-        if self.word.token.tag != other.word.token.tag {
+        if self.word.lexeme != other.word.lexeme {
             return false;
         }
         true
