@@ -12,5 +12,5 @@ cargo build
 
 And then run it:
 ```bash
-cargo run main.dbook
+cargo run examples/main.dbook
 ```
