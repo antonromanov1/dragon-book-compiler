@@ -9,19 +9,9 @@ macro_rules! unreachable {
     };
 }
 
-struct Node {
-    lexer_line: u32,
-}
-
-impl Node {
-    fn new(line: u32) -> Node {
-        Node { lexer_line: line }
-    }
-
-    fn error(&self, s: &str) -> ! {
-        println!("near line {}: {}", self.lexer_line, s);
-        std::process::exit(0);
-    }
+fn error(s: &str, line: u32) -> ! {
+    println!("near line {}: {}", line, s);
+    std::process::exit(0);
 }
 
 pub fn emit_label(i: u32) {
@@ -249,11 +239,6 @@ pub struct Arith {
 }
 
 impl Arith {
-    fn error(line: u32, s: &str) -> ! {
-        let node = Node::new(line);
-        node.error(s);
-    }
-
     pub fn new(
         tok: Token,
         x1: Box<dyn ExprAble>,
@@ -273,7 +258,7 @@ impl Arith {
                     temp_count: count.clone(),
                 };
             }
-            None => Arith::error(line, "type error"),
+            None => error("type error", line),
         };
     }
 }
@@ -298,11 +283,12 @@ impl ExprAble for Arith {
         )
     }
 
+    // Explicitly inherited:
+
     fn reduce(&self) -> Box<dyn ExprAble> {
         op_reduce!(self)
     }
 
-    // Explicitly inherited:
     jumping! {self, op_base}
     emit_jumps! {self, op_base}
     get_type! {self, op_base}
@@ -411,6 +397,9 @@ struct Logical {
     labels: Rc<RefCell<u32>>,
 }
 
+// TODO: write a macro which will create Logical and will be called in Logical::new and
+// Rel::new methods. Inside this macro should be a $self.check($p1, $p2) call
+
 impl Logical {
     #[allow(dead_code)]
     fn new(
@@ -430,6 +419,15 @@ impl Logical {
             }
         } else {
             panic!("type error"); // TODO: should print line
+        }
+    }
+
+    #[allow(dead_code)]
+    fn check(&self, p1: &TypeBase, p2: &TypeBase) -> bool {
+        if *p1 == type_bool() && *p2 == type_bool() {
+            true
+        } else {
+            false
         }
     }
 }
@@ -592,6 +590,11 @@ impl ExprAble for Not {
     reduce! {self, logic}
     emit_jumps! {self, logic}
     get_type! {self, logic}
+}
+
+#[allow(dead_code)]
+pub struct Rel {
+    logic: Logical,
 }
 
 // Statements:
