@@ -178,7 +178,23 @@ impl Parser {
     }
 
     fn rel(&mut self) -> Box<dyn ExprAble> {
-        self.expr()
+        let x = self.expr();
+        let tag = self.look.get_tag().unwrap();
+
+        if tag == '<' as u32 || tag == Tag::Le as u32 || tag == Tag::Ge as u32 || tag == '>' as u32
+        {
+            let tok = self.look.clone();
+            self.move_();
+            Box::new(Rel::new(
+                tok,
+                x,
+                self.expr(),
+                self.temp_count.clone(),
+                self.labels.clone(),
+            ))
+        } else {
+            x
+        }
     }
 
     fn expr(&mut self) -> Box<dyn ExprAble> {

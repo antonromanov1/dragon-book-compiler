@@ -44,6 +44,10 @@ impl ExprBase {
     pub fn new(tok: Token, p: TypeBase) -> ExprBase {
         ExprBase { op: tok, type_: p }
     }
+
+    fn get_op(&self) -> &Token {
+        &self.op
+    }
 }
 
 impl ExprAble for ExprBase {
@@ -390,18 +394,30 @@ pub fn new_label(labels: Rc<RefCell<u32>>) -> u32 {
 }
 
 struct Logical {
-    expr_base: ExprBase,
+    pub expr_base: ExprBase,
     pub expr1: Box<dyn ExprAble>,
     pub expr2: Box<dyn ExprAble>,
     temp_count: Rc<RefCell<u8>>,
     labels: Rc<RefCell<u32>>,
 }
 
-// TODO: write a macro which will create Logical and will be called in Logical::new and
-// Rel::new methods. Inside this macro should be a $self.check($p1, $p2) call
+macro_rules! logical_construct {
+    ( $check:expr, $tok:ident, $x1:ident, $x2:ident, $count:ident, $labels:ident ) => {{
+        if $check((*$x1).get_type(), (*$x2).get_type()) {
+            Logical {
+                expr_base: ExprBase::new($tok, type_bool()),
+                expr1: $x1,
+                expr2: $x2,
+                temp_count: $count,
+                labels: $labels,
+            }
+        } else {
+            panic!("type error"); // TODO
+        }
+    }};
+}
 
 impl Logical {
-    #[allow(dead_code)]
     fn new(
         tok: Token,
         x1: Box<dyn ExprAble>,
@@ -409,21 +425,10 @@ impl Logical {
         count: Rc<RefCell<u8>>,
         labels: Rc<RefCell<u32>>,
     ) -> Logical {
-        if (*(*x1).get_type()) == type_bool() && (*(*x2).get_type()) == type_bool() {
-            Logical {
-                expr_base: ExprBase::new(tok, type_bool()),
-                expr1: x1,
-                expr2: x2,
-                temp_count: count,
-                labels: labels,
-            }
-        } else {
-            panic!("type error"); // TODO: should print line
-        }
+        logical_construct!(Logical::check, tok, x1, x2, count, labels)
     }
 
-    #[allow(dead_code)]
-    fn check(&self, p1: &TypeBase, p2: &TypeBase) -> bool {
+    fn check(p1: &TypeBase, p2: &TypeBase) -> bool {
         if *p1 == type_bool() && *p2 == type_bool() {
             true
         } else {
@@ -592,9 +597,49 @@ impl ExprAble for Not {
     get_type! {self, logic}
 }
 
-#[allow(dead_code)]
 pub struct Rel {
     logic: Logical,
+}
+
+impl Rel {
+    pub fn new(
+        tok: Token,
+        x1: Box<dyn ExprAble>,
+        x2: Box<dyn ExprAble>,
+        count: Rc<RefCell<u8>>,
+        labels: Rc<RefCell<u32>>,
+    ) -> Rel {
+        Rel {
+            logic: logical_construct!(Rel::check, tok, x1, x2, count, labels),
+        }
+    }
+
+    fn check(p1: &TypeBase, p2: &TypeBase) -> bool {
+        if *p1 == *p2 {
+            true
+        } else {
+            false
+        }
+    }
+}
+
+impl ExprAble for Rel {
+    fn jumping(&self, t: u32, f: u32) {
+        let a = self.logic.expr1.reduce();
+        let b = self.logic.expr2.reduce();
+        let test = a.to_string()
+            + " "
+            + &(*self.logic.expr_base.get_op()).to_string()
+            + " "
+            + &b.to_string();
+        self.emit_jumps(test, t, f);
+    }
+
+    gen! {self, logic}
+    reduce! {self, logic}
+    emit_jumps! {self, logic}
+    to_string! {self, logic}
+    get_type! {self, logic}
 }
 
 // Statements:
