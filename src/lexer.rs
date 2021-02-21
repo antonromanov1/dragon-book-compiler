@@ -18,7 +18,7 @@ pub enum Tag {
     // Index,
     Le,
     Minus,
-    // Ne,
+    Ne,
     Num,
     Or,
     Real,

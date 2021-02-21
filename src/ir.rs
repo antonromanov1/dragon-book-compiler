@@ -437,18 +437,24 @@ impl Logical {
     }
 }
 
-impl ExprAble for Logical {
-    fn gen(&self) -> Box<dyn ExprAble> {
-        let f = new_label(self.labels.clone());
-        let a = new_label(self.labels.clone());
-        let temp = Temp::new((*self.get_type()).clone(), self.temp_count.clone());
-        self.jumping(0, f);
+macro_rules! logical_gen {
+    ( $self:expr, $labels:expr, $count:expr ) => {{
+        let f = new_label($labels.clone());
+        let a = new_label($labels.clone());
+        let temp = Temp::new((*$self.get_type()).clone(), $count.clone());
+        $self.jumping(0, f);
         emit(format!("{} = true", temp.to_string()));
         emit(format!("goto L{}", a));
         emit_label(f);
         emit(format!("{} = false", temp.to_string()));
         emit_label(a);
         Box::new(temp)
+    }};
+}
+
+impl ExprAble for Logical {
+    fn gen(&self) -> Box<dyn ExprAble> {
+        logical_gen!(self, self.labels, self.temp_count)
     }
 
     fn to_string(&self) -> String {
@@ -472,7 +478,6 @@ pub struct And {
 }
 
 impl And {
-    #[allow(dead_code)]
     pub fn new(
         tok: Token,
         x1: Box<dyn ExprAble>,
@@ -514,7 +519,6 @@ pub struct Or {
 }
 
 impl Or {
-    #[allow(dead_code)]
     pub fn new(
         tok: Token,
         x1: Box<dyn ExprAble>,
@@ -624,6 +628,10 @@ impl Rel {
 }
 
 impl ExprAble for Rel {
+    fn gen(&self) -> Box<dyn ExprAble> {
+        logical_gen!(self, self.logic.labels, self.logic.temp_count)
+    }
+
     fn jumping(&self, t: u32, f: u32) {
         let a = self.logic.expr1.reduce();
         let b = self.logic.expr2.reduce();
@@ -635,7 +643,8 @@ impl ExprAble for Rel {
         self.emit_jumps(test, t, f);
     }
 
-    gen! {self, logic}
+    // Explicitly inherited:
+
     reduce! {self, logic}
     emit_jumps! {self, logic}
     to_string! {self, logic}
@@ -692,17 +701,13 @@ impl StmtAble for Break {
 }
 
 pub struct Seq {
-    stmt1: Option<Box<dyn StmtAble>>,
-    stmt2: Option<Box<dyn StmtAble>>,
+    stmt1: Box<dyn StmtAble>,
+    stmt2: Box<dyn StmtAble>,
     labels: Rc<RefCell<u32>>,
 }
 
 impl Seq {
-    pub fn new(
-        s1: Option<Box<dyn StmtAble>>,
-        s2: Option<Box<dyn StmtAble>>,
-        labels: Rc<RefCell<u32>>,
-    ) -> Seq {
+    pub fn new(s1: Box<dyn StmtAble>, s2: Box<dyn StmtAble>, labels: Rc<RefCell<u32>>) -> Seq {
         Seq {
             stmt1: s1,
             stmt2: s2,
@@ -713,15 +718,15 @@ impl Seq {
 
 impl StmtAble for Seq {
     fn gen(&self, b: u32, a: u32) {
-        if (*(*self.stmt1.as_ref().unwrap())).is_null() {
-            (*self.stmt2.as_ref().unwrap()).gen(b, a);
-        } else if (*(*self.stmt2.as_ref().unwrap())).is_null() {
-            (*self.stmt1.as_ref().unwrap()).gen(b, a);
+        if (*self.stmt1).is_null() {
+            (*self.stmt2).gen(b, a);
+        } else if (*self.stmt2).is_null() {
+            (*self.stmt1).gen(b, a);
         } else {
             let label = new_label(self.labels.clone());
-            (*self.stmt1.as_ref().unwrap()).gen(b, label);
+            (*self.stmt1).gen(b, label);
             emit_label(label);
-            (*self.stmt2.as_ref().unwrap()).gen(label, a);
+            (*self.stmt2).gen(label, a);
         }
     }
 
@@ -757,5 +762,82 @@ impl StmtAble for Set {
             (*self.id).to_string(),
             (*(*self.expr).gen()).to_string()
         ));
+    }
+}
+
+pub struct If {
+    expr: Box<dyn ExprAble>,
+    stmt: Box<dyn StmtAble>,
+    labels: Rc<RefCell<u32>>,
+}
+
+macro_rules! bool_check {
+    ( $x:ident, $line:ident ) => {
+        if *(*$x).get_type() != type_bool() {
+            error("boolean required in if", $line);
+        }
+    };
+}
+
+impl If {
+    pub fn new(
+        x: Box<dyn ExprAble>,
+        s: Box<dyn StmtAble>,
+        line: u32,
+        labels: Rc<RefCell<u32>>,
+    ) -> If {
+        bool_check!(x, line);
+        If {
+            expr: x,
+            stmt: s,
+            labels: labels,
+        }
+    }
+}
+
+impl StmtAble for If {
+    fn gen(&self, _b: u32, a: u32) {
+        let label = new_label(self.labels.clone());
+        (*self.expr).jumping(0, a);
+        emit_label(label);
+        (*self.stmt).gen(label, a);
+    }
+}
+
+pub struct Else {
+    expr: Box<dyn ExprAble>,
+    stmt1: Box<dyn StmtAble>,
+    stmt2: Box<dyn StmtAble>,
+    labels: Rc<RefCell<u32>>,
+}
+
+impl Else {
+    pub fn new(
+        x: Box<dyn ExprAble>,
+        s1: Box<dyn StmtAble>,
+        s2: Box<dyn StmtAble>,
+        line: u32,
+        labels: Rc<RefCell<u32>>,
+    ) -> Else {
+        bool_check!(x, line);
+        Else {
+            expr: x,
+            stmt1: s1,
+            stmt2: s2,
+            labels: labels,
+        }
+    }
+}
+
+impl StmtAble for Else {
+    fn gen(&self, _b: u32, a: u32) {
+        let label1 = new_label(self.labels.clone());
+        let label2 = new_label(self.labels.clone());
+        self.expr.jumping(0, label2);
+        emit_label(label1);
+        (*self.stmt1).gen(label1, a);
+        emit(format!("goto L{}", a));
+        emit_label(label2);
+        (*self.stmt2).gen(label2, a);
     }
 }

@@ -63,11 +63,11 @@ impl Parser {
         let begin = new_label(self.labels.clone());
         let after = new_label(self.labels.clone());
         emit_label(begin);
-        (*s.unwrap()).gen(begin, after);
+        (*s).gen(begin, after);
         emit_label(after);
     }
 
-    fn block(&mut self) -> Option<Box<dyn StmtAble>> {
+    fn block(&mut self) -> Box<dyn StmtAble> {
         self.match_('{' as u32);
         self.top = Some(Box::new(Env::new(self.top.take())));
         self.decls();
@@ -110,34 +110,45 @@ impl Parser {
         p
     }
 
-    fn stmts(&mut self) -> Option<Box<dyn StmtAble>> {
+    fn stmts(&mut self) -> Box<dyn StmtAble> {
         if self.look.get_tag().unwrap() == '}' as u32 {
-            Some(Box::new(Null {}))
+            Box::new(Null {})
         } else {
-            Some(Box::new(Seq::new(
-                self.stmt(),
-                self.stmts(),
-                self.labels.clone(),
-            )))
+            Box::new(Seq::new(self.stmt(), self.stmts(), self.labels.clone()))
         }
     }
 
-    fn stmt(&mut self) -> Option<Box<dyn StmtAble>> {
-        if self.look.get_tag().unwrap() == ';' as u32 {
+    fn stmt(&mut self) -> Box<dyn StmtAble> {
+        let tag = self.look.get_tag().unwrap();
+
+        if tag == ';' as u32 {
             self.move_();
-            Some(Box::new(Null {}))
-        } else if self.look.get_tag().unwrap() == Tag::Break as u32 {
+            Box::new(Null {})
+        } else if tag == Tag::If as u32 {
+            self.match_(Tag::If as u32);
+            self.match_('(' as u32);
+            let x = self.bool_();
+            self.match_(')' as u32);
+
+            let s1 = self.stmt();
+            if self.look.get_tag().unwrap() != Tag::Else as u32 {
+                return Box::new(If::new(x, s1, self.lex.line_num, self.labels.clone()));
+            }
+            self.match_(Tag::Else as u32);
+            let s2 = self.stmt();
+            Box::new(Else::new(x, s1, s2, self.lex.line_num, self.labels.clone()))
+        } else if tag == Tag::Break as u32 {
             self.match_(Tag::Break as u32);
             self.match_(';' as u32);
 
             if self.enclosing.is_none() {
                 panic!("unenclosed break"); // TODO: rewrite Break IR
             }
-            Some(Box::new(Break::new(self.enclosing.take())))
-        } else if self.look.get_tag().unwrap() == '{' as u32 {
+            Box::new(Break::new(self.enclosing.take()))
+        } else if tag == '{' as u32 {
             self.block()
         } else {
-            Some(self.assign())
+            self.assign()
         }
     }
 
@@ -166,15 +177,53 @@ impl Parser {
     }
 
     fn bool_(&mut self) -> Box<dyn ExprAble> {
-        self.join()
+        let mut x = self.join();
+        while self.look.get_tag().unwrap() == Tag::Or as u32 {
+            let tok = self.look.clone();
+            self.move_();
+            x = Box::new(Or::new(
+                tok,
+                x,
+                self.join(),
+                self.temp_count.clone(),
+                self.labels.clone(),
+            ));
+        }
+        x
     }
 
     fn join(&mut self) -> Box<dyn ExprAble> {
-        self.equality()
+        let mut x = self.equality();
+        while self.look.get_tag().unwrap() == Tag::And as u32 {
+            let tok = self.look.clone();
+            self.move_();
+            x = Box::new(And::new(
+                tok,
+                x,
+                self.equality(),
+                self.temp_count.clone(),
+                self.labels.clone(),
+            ));
+        }
+        x
     }
 
     fn equality(&mut self) -> Box<dyn ExprAble> {
-        self.rel()
+        let mut x = self.rel();
+        while self.look.get_tag().unwrap() == Tag::Eq_ as u32
+            || self.look.get_tag().unwrap() == Tag::Ne as u32
+        {
+            let tok = self.look.clone();
+            self.move_();
+            x = Box::new(Rel::new(
+                tok,
+                x,
+                self.rel(),
+                self.temp_count.clone(),
+                self.labels.clone(),
+            ));
+        }
+        x
     }
 
     fn rel(&mut self) -> Box<dyn ExprAble> {
