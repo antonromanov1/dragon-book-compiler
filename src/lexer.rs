@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::io::Read;
 
-/// This enumeration represents token types except for symbols such {, }, etc.
+/// Enumeration Tag represents token types except for symbols such {, }, etc.
 pub enum Tag {
     And = 256,
     Basic, // primitive types such as char, bool, int, float and array
@@ -15,7 +15,6 @@ pub enum Tag {
     Ge,
     Id,
     If,
-    // Index,
     Le,
     Minus,
     Ne,
@@ -230,13 +229,13 @@ pub enum Token {
 impl Token {
     pub fn get_tag(&self) -> Option<u32> {
         match &*self {
-            Token::Token(a) => Some(a.tag),
-            Token::Word(b) => match b {
-                Word::Word(x) => Some(x.token.tag),
-                Word::Type(y) => Some(y.word.token.tag),
-            }, // TODO: find out why comma is not here
-            Token::Num(c) => Some(c.token.tag),
-            Token::Real(d) => Some(d.token.tag),
+            Token::Token(tok) => Some(tok.tag),
+            Token::Word(word) => match word {
+                Word::Word(word_base) => Some(word_base.token.tag),
+                Word::Type(type_base) => Some(type_base.word.token.tag),
+            },
+            Token::Num(num) => Some(num.token.tag),
+            Token::Real(real) => Some(real.token.tag),
             Token::Eof => None,
         }
     }
@@ -262,7 +261,6 @@ impl Token {
 pub struct Lexer {
     buf_reader: BufReader<File>,
     pub line_num: u32, // uses for syntax error reports
-    // line: String,
     peek: char,
     eof: bool,
     words: HashMap<String, Word>,
@@ -284,7 +282,6 @@ impl Lexer {
         let mut lex = Lexer {
             buf_reader: BufReader::new(File::open(file_name).expect("open failed")),
             line_num: 1,
-            // line: String::new(),
             peek: ' ',
             eof: false,
             words: HashMap::new(),
@@ -394,6 +391,7 @@ impl Lexer {
             if self.peek != '.' {
                 return Token::Num(Num::new(v));
             }
+
             let mut x = v as f32;
             let mut d = 10 as f32;
             loop {
@@ -422,13 +420,6 @@ impl Lexer {
             match self.words.get(&s) {
                 Some(word) => {
                     return Token::Word((*word).clone());
-                    /*
-                    match x {
-                        Word::Word(word_base) => y.clone(),
-                        Word::Type(z) => z.word.clone(),
-                    }
-                    return Token::Word(Word::Word(w));
-                    */
                 }
                 None => {
                     let w = WordBase {

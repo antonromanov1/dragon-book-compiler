@@ -163,6 +163,7 @@ impl ExprAble for Temp {
     }
 
     // Explicitly inherited:
+
     gen! {self, expr_base}
     reduce! {self, expr_base}
     jumping! {self, expr_base}
@@ -187,6 +188,7 @@ impl Id {
 
 impl ExprAble for Id {
     // All explicitly inherited
+
     gen! {self, expr_base}
     reduce! {self, expr_base}
     jumping! {self, expr_base}
@@ -226,7 +228,8 @@ impl ExprAble for OpBase {
         op_reduce!(self)
     }
 
-    // Inherited:
+    // Explicitly inherited:
+
     gen! {self, expr_base}
     jumping! {self, expr_base}
     emit_jumps! {self, expr_base}
@@ -307,7 +310,7 @@ impl Unary {
     pub fn new(tok: Token, x: Box<dyn ExprAble>, count: Rc<RefCell<u8>>) -> Unary {
         let type_ = TypeBase::max(&type_int(), (*x).get_type());
         if type_ == None {
-            panic!("type error"); // TODO: add output of line of source code
+            panic!("type error");
         }
 
         Unary {
@@ -381,6 +384,7 @@ impl ExprAble for Constant {
     }
 
     // Explicitly inherited:
+
     gen! {self, expr_base}
     reduce! {self, expr_base}
     emit_jumps! {self, expr_base}
@@ -412,7 +416,7 @@ macro_rules! logical_construct {
                 labels: $labels,
             }
         } else {
-            panic!("type error"); // TODO
+            panic!("type error");
         }
     }};
 }
@@ -467,6 +471,7 @@ impl ExprAble for Logical {
     }
 
     // Explicitly inherited:
+
     reduce! {self, expr_base}
     jumping! {self, expr_base}
     emit_jumps! {self, expr_base}
@@ -507,6 +512,7 @@ impl ExprAble for And {
     }
 
     // Explicitly inherited:
+
     gen! {self, logic}
     reduce! {self, logic}
     emit_jumps! {self, logic}
@@ -548,6 +554,7 @@ impl ExprAble for Or {
     }
 
     // Explicitly inherited:
+
     gen! {self, logic}
     reduce! {self, logic}
     emit_jumps! {self, logic}
