@@ -15,7 +15,7 @@ pub struct Parser {
     lex: Lexer,
     look: Token,
     top: Option<Box<Env>>,
-    enclosing: Option<Box<dyn StmtAble>>,
+    enclosing: bool,
     temp_count: Rc<RefCell<u8>>,
     labels: Rc<RefCell<u32>>,
     used: u32,
@@ -31,7 +31,7 @@ impl Parser {
             lex: l,
             look: Token::Token(TokenBase { tag: 0 }),
             top: None,
-            enclosing: None,
+            enclosing: false,
             temp_count: Rc::new(RefCell::new(0)),
             labels: Rc::new(RefCell::new(0)),
             used: 0,
@@ -63,7 +63,7 @@ impl Parser {
         let begin = new_label(self.labels.clone());
         let after = new_label(self.labels.clone());
         emit_label(begin);
-        (*s).gen(begin, after);
+        (*s).gen(begin, after, 0);
         emit_label(after);
     }
 
@@ -137,14 +137,24 @@ impl Parser {
             self.match_(Tag::Else as u32);
             let s2 = self.stmt();
             Box::new(Else::new(x, s1, s2, self.lex.line_num, self.labels.clone()))
+        } else if tag == Tag::While as u32 {
+            self.enclosing = true;
+            let mut while_node = Box::new(While::new(self.lex.line_num, self.labels.clone()));
+            self.match_(Tag::While as u32);
+            self.match_('(' as u32);
+            let x = self.bool_();
+            self.match_(')' as u32);
+            let s = self.stmt();
+            (*while_node).init(x, s);
+            while_node
         } else if tag == Tag::Break as u32 {
             self.match_(Tag::Break as u32);
             self.match_(';' as u32);
 
-            if self.enclosing.is_none() {
-                panic!("unenclosed break"); // TODO: rewrite Break IR
+            if !self.enclosing {
+                panic!("unenclosed break");
             }
-            Box::new(Break::new(self.enclosing.take()))
+            Box::new(Break {})
         } else if tag == '{' as u32 {
             self.block()
         } else {

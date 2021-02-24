@@ -654,14 +654,16 @@ impl ExprAble for Rel {
 // Statements:
 
 pub trait StmtAble {
-    // gen is called with labels begin and after
+    // gen is called with labels begin, after and _gen_after which is passed by While node
 
-    fn gen(&self, _b: u32, _a: u32) {}
-    fn get_after(&self) -> u32 {
-        0
-    }
+    fn gen(&self, _b: u32, _a: u32, _gen_after: u32) {}
+
     fn is_null(&self) -> bool {
         false
+    }
+
+    fn init(&mut self, _x: Box<dyn ExprAble>, _s: Box<dyn StmtAble>) {
+        unreachable!();
     }
 }
 
@@ -673,30 +675,11 @@ impl StmtAble for Null {
     }
 }
 
-pub struct Break {
-    after: u32,
-    stmt: Box<dyn StmtAble>,
-}
-
-impl Break {
-    pub fn new(enclosing: Option<Box<dyn StmtAble>>) -> Break {
-        Break {
-            after: 0,
-            stmt: match enclosing {
-                None => panic!("unenclosed break"),
-                Some(cycle_ptr) => cycle_ptr,
-            },
-        }
-    }
-}
+pub struct Break {}
 
 impl StmtAble for Break {
-    fn gen(&self, _b: u32, _a: u32) {
-        emit(format!("goto L{}", (*self.stmt).get_after()));
-    }
-
-    fn get_after(&self) -> u32 {
-        self.after
+    fn gen(&self, _b: u32, _a: u32, gen_after: u32) {
+        emit(format!("goto L{}", gen_after));
     }
 }
 
@@ -717,21 +700,17 @@ impl Seq {
 }
 
 impl StmtAble for Seq {
-    fn gen(&self, b: u32, a: u32) {
+    fn gen(&self, b: u32, a: u32, gen_after: u32) {
         if (*self.stmt1).is_null() {
-            (*self.stmt2).gen(b, a);
+            (*self.stmt2).gen(b, a, gen_after);
         } else if (*self.stmt2).is_null() {
-            (*self.stmt1).gen(b, a);
+            (*self.stmt1).gen(b, a, gen_after);
         } else {
             let label = new_label(self.labels.clone());
-            (*self.stmt1).gen(b, label);
+            (*self.stmt1).gen(b, label, gen_after);
             emit_label(label);
-            (*self.stmt2).gen(label, a);
+            (*self.stmt2).gen(label, a, gen_after);
         }
-    }
-
-    fn get_after(&self) -> u32 {
-        unreachable!();
     }
 }
 
@@ -756,7 +735,7 @@ impl Set {
 }
 
 impl StmtAble for Set {
-    fn gen(&self, _b: u32, _a: u32) {
+    fn gen(&self, _b: u32, _a: u32, _gen_after: u32) {
         emit(format!(
             "{} = {}",
             (*self.id).to_string(),
@@ -772,7 +751,7 @@ pub struct If {
 }
 
 macro_rules! bool_check {
-    ( $x:ident, $line:ident ) => {
+    ( $x:ident, $line:expr ) => {
         if *(*$x).get_type() != type_bool() {
             error("boolean required in if", $line);
         }
@@ -796,11 +775,11 @@ impl If {
 }
 
 impl StmtAble for If {
-    fn gen(&self, _b: u32, a: u32) {
+    fn gen(&self, _b: u32, a: u32, gen_after: u32) {
         let label = new_label(self.labels.clone());
         (*self.expr).jumping(0, a);
         emit_label(label);
-        (*self.stmt).gen(label, a);
+        (*self.stmt).gen(label, a, gen_after);
     }
 }
 
@@ -830,14 +809,48 @@ impl Else {
 }
 
 impl StmtAble for Else {
-    fn gen(&self, _b: u32, a: u32) {
+    fn gen(&self, _b: u32, a: u32, gen_after: u32) {
         let label1 = new_label(self.labels.clone());
         let label2 = new_label(self.labels.clone());
         self.expr.jumping(0, label2);
         emit_label(label1);
-        (*self.stmt1).gen(label1, a);
+        (*self.stmt1).gen(label1, a, gen_after);
         emit(format!("goto L{}", a));
         emit_label(label2);
-        (*self.stmt2).gen(label2, a);
+        (*self.stmt2).gen(label2, a, gen_after);
+    }
+}
+
+pub struct While {
+    expr: Option<Box<dyn ExprAble>>,
+    stmt: Option<Box<dyn StmtAble>>,
+    line: u32,
+    labels: Rc<RefCell<u32>>,
+}
+
+impl While {
+    pub fn new(line: u32, labels: Rc<RefCell<u32>>) -> While {
+        While {
+            expr: None,
+            stmt: None,
+            line: line,
+            labels: labels,
+        }
+    }
+}
+
+impl StmtAble for While {
+    fn gen(&self, b: u32, a: u32, _gen_after: u32) {
+        self.expr.as_ref().unwrap().jumping(0, a);
+        let label = new_label(self.labels.clone());
+        emit_label(label);
+        self.stmt.as_ref().unwrap().gen(label, b, a);
+        emit(format!("goto L{}", b));
+    }
+
+    fn init(&mut self, x: Box<dyn ExprAble>, s: Box<dyn StmtAble>) {
+        bool_check!(x, self.line);
+        self.expr = Some(x);
+        self.stmt = Some(s);
     }
 }
