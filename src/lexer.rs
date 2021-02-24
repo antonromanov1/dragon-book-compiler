@@ -194,14 +194,6 @@ pub fn numeric(p: &TypeBase) -> bool {
 }
 
 impl TypeBase {
-    #[allow(dead_code)]
-    pub fn new(w: WordBase, wid: u32) -> TypeBase {
-        TypeBase {
-            word: w,
-            width: wid,
-        }
-    }
-
     #[inline]
     pub fn get_width(&self) -> u32 {
         self.width
