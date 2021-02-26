@@ -579,7 +579,7 @@ impl Not {
         Not {
             logic: Logical::new(
                 tok,
-                Box::new(Id::new(word_true(), type_int(), 0)),
+                Box::new(Id::new(word_true(), type_bool(), 0)),
                 x2,
                 count,
                 labels,
